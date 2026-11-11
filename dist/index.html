@@ -53,9 +53,22 @@
         <section class="practice-card" aria-label="谱面练习">
           <div class="card-head">
             <div class="track-heading"><h1 id="trackTitle">节拍练习 · 六键</h1><div class="track-meta"><span id="trackArtist">原创示范谱</span><i></i><span id="trackInfo">120 BPM</span><i></i><span>六键</span></div></div>
-            <div class="practice-label"><span class="small-star">✦</span> 手动练习</div>
+            <div class="theme-picker">
+              <label for="themeSelect"><span aria-hidden="true">✦</span> 谱面主题</label>
+              <select id="themeSelect" aria-label="谱面主题">
+                <option value="base">基础主题</option>
+                <option value="wind">风与自由</option>
+                <option value="geo">岩与契约</option>
+                <option value="electro">雷与永恒</option>
+                <option value="hydro">水与正义</option>
+                <option value="pyro">火与战争</option>
+                <option value="dendro">草与智慧</option>
+                <option value="dream">静思浮梦</option>
+                <option value="frost">霜月的祷言</option>
+              </select>
+            </div>
           </div>
-          <div class="stage-wrap" id="stageWrap">
+          <div class="stage-wrap" id="stageWrap" data-theme="base">
             <canvas id="stage" aria-label="六轨音符练习区"></canvas>
             <div class="stage-top"><span id="stageTime">00:00 / 00:32</span><div class="combo-display"><strong id="statCombo">0</strong><span>连击</span></div><span class="stage-mode">垂直模式</span></div>
             <div id="stageHint" class="stage-hint"><span class="hint-diamond">✦</span><strong>准备演奏</strong><span>点击上方播放键开始练习</span></div>

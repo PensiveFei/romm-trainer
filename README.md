@@ -15,6 +15,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **PC 手动练习**：六键键盘操作，支持单点、同时按和长按，并可自定义键位。
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
 - **练习设置**：调整音乐播放速度、音符下落速度和时间偏移。
+- **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看命中、连击、漏击以及按键偏早或偏晚的情况。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
 
@@ -23,6 +24,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Manual PC practice**: Play six lanes with configurable keyboard bindings, including taps, simultaneous notes, and holds.
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
 - **Practice settings**: Adjust the music playback rate, note scroll speed, and timing offset independently.
+- **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See hits, combo, misses, and early or late timing.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
 

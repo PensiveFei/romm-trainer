@@ -10,9 +10,9 @@
 * { box-sizing: border-box; }
 html { min-height: 100%; background: #1d2736; }
 body { margin: 0; min-width: 720px; color: var(--ink); font: 14px/1.5 var(--serif); }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; }
-button:focus-visible, input:focus-visible { outline: 2px solid #f7d782; outline-offset: 4px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #f7d782; outline-offset: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
 .game-frame {
@@ -218,4 +218,26 @@ input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px s
   .scroll-label { margin-top: 12px; }
   .offset-row { margin-top: 9px; padding-top: 9px; }
   .key-help { margin-top: 7px; }
+}
+
+
+/* Theme choice stays beside the score so the practice settings retain their space. */
+.theme-picker { display:flex; align-items:center; gap:9px; flex:none; margin-top:2px; white-space:nowrap; }
+.theme-picker label { color:#d6d8d2; font-size:11px; }
+.theme-picker label span { color:#e8cd8a; margin-right:3px; }
+.theme-picker select { width:132px; height:30px; padding:0 25px 0 11px; border:1px solid rgba(232,218,183,.38); border-radius:16px; color:#f3eee1; background:#303a4a; cursor:pointer; font-size:11px; }
+.theme-picker select:hover { border-color:#ebd4a1; }
+.theme-picker option { background:#303a4a; color:#f3eee1; }
+.stage-wrap[data-theme="wind"] { background:radial-gradient(ellipse at 50% 92%,rgba(150,224,194,.36),transparent 48%),radial-gradient(ellipse at 10% 42%,rgba(98,190,177,.16),transparent 42%),linear-gradient(180deg,#243c4c 0%,#315a62 55%,#54867a 100%); }
+.stage-wrap[data-theme="geo"] { background:radial-gradient(ellipse at 50% 92%,rgba(218,168,82,.33),transparent 48%),radial-gradient(ellipse at 90% 30%,rgba(192,143,74,.16),transparent 46%),linear-gradient(180deg,#383442 0%,#5a4b47 55%,#836851 100%); }
+.stage-wrap[data-theme="electro"] { background:radial-gradient(ellipse at 50% 92%,rgba(178,126,225,.33),transparent 48%),radial-gradient(ellipse at 90% 30%,rgba(186,123,212,.18),transparent 46%),linear-gradient(180deg,#302e4a 0%,#4b3d63 55%,#675378 100%); }
+.stage-wrap[data-theme="hydro"] { background:radial-gradient(ellipse at 50% 92%,rgba(128,205,231,.34),transparent 48%),radial-gradient(ellipse at 10% 40%,rgba(98,166,220,.19),transparent 42%),linear-gradient(180deg,#203849 0%,#31546d 55%,#4a7d92 100%); }
+.stage-wrap[data-theme="pyro"] { background:radial-gradient(ellipse at 50% 95%,rgba(236,136,77,.33),transparent 48%),radial-gradient(ellipse at 90% 40%,rgba(220,101,71,.16),transparent 44%),linear-gradient(180deg,#3d303c 0%,#613f40 55%,#8d5949 100%); }
+.stage-wrap[data-theme="dendro"] { background:radial-gradient(ellipse at 50% 92%,rgba(178,214,119,.31),transparent 48%),radial-gradient(ellipse at 8% 36%,rgba(119,174,119,.18),transparent 42%),linear-gradient(180deg,#30403f 0%,#485d4a 55%,#71835b 100%); }
+.stage-wrap[data-theme="dream"] { background:radial-gradient(ellipse at 50% 49%,rgba(216,232,172,.22),transparent 40%),radial-gradient(ellipse at 50% 100%,rgba(197,219,159,.29),transparent 48%),linear-gradient(180deg,#394747 0%,#627364 55%,#87957a 100%); }
+.stage-wrap[data-theme="frost"] { background:radial-gradient(ellipse at 83% 25%,rgba(207,225,250,.20),transparent 34%),radial-gradient(ellipse at 50% 95%,rgba(154,179,216,.28),transparent 47%),linear-gradient(180deg,#292f49 0%,#3c4b69 55%,#60728f 100%); }
+@media (max-width:650px) {
+  .theme-picker { gap:5px; }
+  .theme-picker label { font-size:10px; }
+  .theme-picker select { width:112px; }
 }

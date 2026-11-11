@@ -22,7 +22,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     'startRange','endRange','startOutput','endOutput','loopToggle','scrollSpeed','scrollLabel','offset','speedLabel',
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
-    'chartFile','audioFile','chartButton','audioButton','demoButton'];
+    'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true;
   const listeners={};
@@ -33,7 +33,8 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     createElement(){ return new FakeElement(); }, createTextNode(text){ return {textContent:text}; },
     addEventListener(){}
   };
-  globalThis.localStorage={ getItem(){return null;}, setItem(){} };
+  const settings=new Map();
+  globalThis.localStorage={ getItem(key){return settings.get(key) ?? null;}, setItem(key,value){settings.set(key,value);} };
   globalThis.requestAnimationFrame=()=>0;
   class FakeAudio {
     constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
@@ -51,7 +52,16 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.playText.textContent,'暂停');
   testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
+  el.themeSelect.value='electro'; el.themeSelect.dispatch('change');
+  assert.equal(el.stageWrap.dataset.theme,'electro');
+  assert.equal(settings.get('romm-trainer-theme'),'electro');
+  assert.equal(el.playText.textContent,'暂停');
+  assert.equal(testAudio.currentTime,2);
+  assert.equal(el.statHits.children[0].textContent.trim(),'1');
   testAudio.currentTime=10; press('keydown','KeyA');
+  el.themeSelect.value='dream'; el.themeSelect.dispatch('change');
+  assert.equal(el.stageWrap.dataset.theme,'dream');
+  assert.equal(testAudio.currentTime,10);
   const missesBefore=Number(el.statMiss.textContent);
   el.playButton.dispatch('click');
   assert.equal(el.playText.textContent,'继续练习');

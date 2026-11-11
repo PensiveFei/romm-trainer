@@ -1,5 +1,6 @@
 import { demoChart, validateChart, validateRange } from './chart.js';
 import { Judge } from './judge.js';
+import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -11,7 +12,7 @@ const els = {
   duration: $('duration'), stageTime: $('stageTime'), fill: $('progressFill'), hits: $('statHits'),
   combo: $('statCombo'), timing: $('statTiming'), miss: $('statMiss'), title: $('trackTitle'), artist: $('trackArtist'),
   info: $('trackInfo'), sideTitle: $('sideTitle'), sideArtist: $('sideArtist'), sideBpm: $('sideBpm'),
-  sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile')
+  sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect')
 };
 const audio = new Audio();
 audio.preload = 'metadata';
@@ -27,10 +28,14 @@ let audioReady = false, isPlaying = false, hasStarted = false, ending = false, a
 let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
 const held = new Set();
+let themeId = 'base', currentTheme = getTheme(themeId);
+const hitEffects = [];
 const canvas = els.stage;
 const ctx = canvas.getContext('2d');
 
 try {
+  const savedTheme = localStorage.getItem('romm-trainer-theme');
+  if (Object.hasOwn(THEMES, savedTheme)) themeId = savedTheme;
   const stored = JSON.parse(localStorage.getItem('romm-trainer-keys') || 'null');
   if (Array.isArray(stored) && stored.length === 6 && new Set(stored).size === 6 && stored.every(k => /^(Key[A-Z]|Digit[0-9])$/.test(k))) keys = stored;
   const savedScroll = Number(localStorage.getItem('romm-trainer-scroll'));
@@ -38,10 +43,19 @@ try {
   const savedOffset = Number(localStorage.getItem('romm-trainer-offset'));
   if (savedOffset >= -300 && savedOffset <= 300) offset = savedOffset;
 } catch { /* Local settings are optional. */ }
+applyTheme(themeId, false);
 els.scroll.value = scrollRate;
 els.scrollLabel.textContent = scrollRate.toFixed(1) + '×';
 els.offset.value = offset;
 
+function applyTheme(id, save = true) {
+  themeId = Object.hasOwn(THEMES, id) ? id : 'base';
+  currentTheme = getTheme(themeId);
+  els.wrap.dataset.theme = themeId;
+  els.theme.value = themeId;
+  hitEffects.length = 0;
+  if (save) { try { localStorage.setItem('romm-trainer-theme', themeId); } catch {} }
+}
 function format(ms, tenths = false) {
   const safe = Math.max(0, Number.isFinite(ms) ? ms : 0);
   const seconds = Math.floor(safe / 1000);
@@ -130,7 +144,7 @@ function pause() {
 }
 function resetSession() {
   if (isPlaying) pause();
-  held.clear(); ending = false; hasStarted = false;
+  held.clear(); hitEffects.length = 0; ending = false; hasStarted = false;
   session = new Judge(chart,startMs,endMs,rate,offset);
   previewMs = Math.max(0,startMs - 2000);
   if (audioReady) {
@@ -258,35 +272,29 @@ async function importChart(file) {
 }
 
 function roundRect(x,y,w,h,r) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
-function drawStar(x, y, radius, color) {
+function notePath(x,y,radius,shape) {
   ctx.beginPath();
-  ctx.moveTo(x, y - radius);
-  ctx.quadraticCurveTo(x + radius * .18, y - radius * .18, x + radius, y);
-  ctx.quadraticCurveTo(x + radius * .18, y + radius * .18, x, y + radius);
-  ctx.quadraticCurveTo(x - radius * .18, y + radius * .18, x - radius, y);
-  ctx.quadraticCurveTo(x - radius * .18, y - radius * .18, x, y - radius);
-  ctx.fillStyle = color;
-  ctx.fill();
+  if (shape === 'diamond') {
+    ctx.moveTo(x,y-radius); ctx.lineTo(x+radius,y); ctx.lineTo(x,y+radius); ctx.lineTo(x-radius,y); ctx.closePath();
+  } else if (shape === 'hexagon') {
+    for (let i=0;i<6;i++) { const angle=Math.PI/3*i-Math.PI/2, px=x+Math.cos(angle)*radius, py=y+Math.sin(angle)*radius; if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+    ctx.closePath();
+  } else ctx.arc(x,y,radius,0,Math.PI*2);
 }
 function drawNote(x, y, radius, isHold) {
-  const base = isHold ? '#8e70e9' : '#efb44f';
-  const light = isHold ? '#c7afff' : '#ffe6a8';
-  ctx.save();
-  ctx.shadowColor = isHold ? 'rgba(155,126,255,.70)' : 'rgba(255,204,101,.62)';
-  ctx.shadowBlur = 13;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = isHold ? '#7256c1' : '#c88c3d';
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = 2.3;
-  ctx.strokeStyle = 'rgba(246,245,235,.90)';
-  ctx.stroke();
-  const fill = ctx.createRadialGradient(x-radius*.3,y-radius*.4,radius*.05,x,y,radius);
-  fill.addColorStop(0,light); fill.addColorStop(.58,base); fill.addColorStop(1,isHold ? '#7354c3' : '#c88d37');
-  ctx.beginPath(); ctx.arc(x,y,radius*.80,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill();
-  ctx.lineWidth=1; ctx.strokeStyle=isHold ? 'rgba(225,213,255,.8)' : 'rgba(255,237,183,.85)'; ctx.stroke();
-  drawStar(x,y,radius*.47,isHold ? '#ded0ff' : '#ffefbc');
+  const colors=isHold ? currentTheme.hold : currentTheme.tap;
+  ctx.save(); ctx.shadowColor=rgba(colors[1],.7); ctx.shadowBlur=13;
+  notePath(x,y,radius,currentTheme.shape);ctx.fillStyle=colors[2];ctx.fill();
+  ctx.shadowBlur=0;ctx.lineWidth=2.2;ctx.strokeStyle='rgba(250,250,241,.92)';ctx.stroke();
+  const fill=ctx.createRadialGradient(x-radius*.3,y-radius*.4,radius*.05,x,y,radius);
+  fill.addColorStop(0,colors[0]);fill.addColorStop(.58,colors[1]);fill.addColorStop(1,colors[2]);
+  notePath(x,y,radius*.8,currentTheme.shape);ctx.fillStyle=fill;ctx.fill();
+  ctx.lineWidth=1;ctx.strokeStyle=rgba(colors[0],.84);ctx.stroke();
+  if (isHold) {
+    notePath(x,y,radius*.62,currentTheme.shape);ctx.setLineDash([2,2]);
+    ctx.strokeStyle=rgba(colors[0],.78);ctx.stroke();ctx.setLineDash([]);
+  }
+  paintMotif(ctx,currentTheme.motif,x,y,radius*.43,colors[0]);
   ctx.restore();
 }
 function renderStage(songMs) {
@@ -305,13 +313,14 @@ function renderStage(songMs) {
   const showTime = songMs - offset * rate;
   const center = lane => left + lane * laneWidth + laneWidth / 2;
   const radius = Math.min(21,laneWidth * .26);
+  paintBackdrop(ctx,currentTheme,w,h);
 
   for (let lane=0;lane<6;lane++) {
     const x = center(lane);
     const beam = ctx.createLinearGradient(0,75,0,hitY);
     beam.addColorStop(0,'rgba(233,241,237,0)');
-    beam.addColorStop(.35, held.has(lane) ? 'rgba(255,241,193,.30)' : 'rgba(232,240,237,.14)');
-    beam.addColorStop(1, held.has(lane) ? 'rgba(255,241,193,.78)' : 'rgba(232,240,237,.48)');
+    beam.addColorStop(.35, held.has(lane) ? rgba(currentTheme.accent,.30) : 'rgba(232,240,237,.14)');
+    beam.addColorStop(1, held.has(lane) ? rgba(currentTheme.accent,.85) : 'rgba(232,240,237,.48)');
     ctx.strokeStyle=beam; ctx.lineWidth=held.has(lane)?2:1;
     ctx.beginPath(); ctx.moveTo(x,75); ctx.lineTo(x,hitY); ctx.stroke();
   }
@@ -327,7 +336,7 @@ function renderStage(songMs) {
     const y=hitY-(atMs-showTime)*pxPerMs;
     if (notes.length<2 || y < -30 || y > h+20) continue;
     const lanes=notes.map(n=>n.lane);
-    ctx.strokeStyle='rgba(255,241,200,.78)'; ctx.lineWidth=3;
+    ctx.strokeStyle=rgba(currentTheme.accent,.82); ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(center(Math.min(...lanes)),y);ctx.lineTo(center(Math.max(...lanes)),y);ctx.stroke();
   }
 
@@ -343,11 +352,11 @@ function renderStage(songMs) {
       if (shownHead > top) {
         const width = radius * 1.25;
         const ribbon=ctx.createLinearGradient(x-width/2,0,x+width/2,0);
-        ribbon.addColorStop(0,'rgba(171,146,255,.22)');
-        ribbon.addColorStop(.45,'rgba(164,140,255,.52)');
-        ribbon.addColorStop(1,'rgba(202,186,255,.22)');
+        ribbon.addColorStop(0,rgba(currentTheme.hold[1],.22));
+        ribbon.addColorStop(.45,rgba(currentTheme.hold[1],.55));
+        ribbon.addColorStop(1,rgba(currentTheme.hold[0],.22));
         ctx.fillStyle=ribbon;ctx.fillRect(x-width/2,top,width,shownHead-top);
-        ctx.strokeStyle='rgba(212,203,255,.45)';ctx.lineWidth=1;
+        ctx.strokeStyle=rgba(currentTheme.hold[0],.52);ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(x-width/2,top);ctx.lineTo(x-width/2,shownHead);
         ctx.moveTo(x+width/2,top);ctx.lineTo(x+width/2,shownHead);ctx.stroke();
       }
@@ -356,19 +365,25 @@ function renderStage(songMs) {
   }
 
   ctx.save();
-  ctx.shadowColor='rgba(255,232,173,.5)';ctx.shadowBlur=8;
+  ctx.shadowColor=rgba(currentTheme.accent,.55);ctx.shadowBlur=8;
   ctx.strokeStyle='rgba(236,231,204,.76)';ctx.lineWidth=1.5;
   ctx.beginPath();ctx.moveTo(center(0),hitY);ctx.lineTo(center(5),hitY);ctx.stroke();
   ctx.restore();
+  const effectTime=performance.now();
+  for (let i=hitEffects.length-1;i>=0;i--) {
+    const effect=hitEffects[i], progress=(effectTime-effect.started)/700;
+    if (progress>=1) hitEffects.splice(i,1);
+    else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress);
+  }
   for (let lane=0;lane<6;lane++) {
     const x=center(lane);
     ctx.save();
-    if (held.has(lane)) {ctx.shadowColor='#ffe0a0';ctx.shadowBlur=18;}
+    if (held.has(lane)) {ctx.shadowColor=currentTheme.accent;ctx.shadowBlur=18;}
     ctx.beginPath();ctx.arc(x,hitY,13,0,Math.PI*2);
     ctx.fillStyle='rgba(226,219,192,.17)';ctx.fill();
     ctx.lineWidth=1;ctx.strokeStyle='rgba(234,234,223,.32)';ctx.stroke();
     ctx.beginPath();ctx.arc(x,hitY,8,0,Math.PI*2);
-    ctx.fillStyle=held.has(lane)?'#ffe5a5':'#f0eee5';ctx.fill();
+    ctx.fillStyle=held.has(lane)?currentTheme.accent:'#f0eee5';ctx.fill();
     ctx.restore();
     const keyWidth=Math.min(25,laneWidth*.55);
     ctx.fillStyle='rgba(247,246,239,.94)';roundRect(x-keyWidth/2,hitY+27,keyWidth,23,3);ctx.fill();
@@ -387,6 +402,7 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+els.theme.addEventListener('change',() => { applyTheme(els.theme.value); els.theme.blur(); });
 els.play.addEventListener('click',togglePlay);
 els.restart.addEventListener('click',() => { resetSession(); setMessage('已回到片段起点。',true); });
 els.start.addEventListener('input',handleRange);
@@ -438,6 +454,8 @@ window.addEventListener('keydown',(event) => {
   held.add(lane);
   const note=session.press(lane,audio.currentTime*1000);
   if (note) {
+    hitEffects.push({ lane, started:performance.now() });
+    if (hitEffects.length > 24) hitEffects.shift();
     const e=Math.round(note.errorMs);
     flash(note.grade === 'precise' ? '准确' : (e < 0 ? '偏早 ' : '偏晚 ') + Math.abs(e) + ' ms');
   }
