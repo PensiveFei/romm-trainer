@@ -1,0 +1,12 @@
+{
+  "name": "romm-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "原神 千音习谱 — a standalone PC rhythm practice prototype",
+  "scripts": {
+    "start": "node scripts/server.mjs",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}

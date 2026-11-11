@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183d3b">
+  <title>千音习谱 | ROMM-Trainer</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><span>♪</span></div>
+      <div><strong>千音习谱</strong><small>RoMM TRAINER</small></div>
+    </div>
+    <div class="topbar-middle"><span class="tiny-diamond"></span> 为每一段旋律，留一点练习的时间</div>
+    <div class="topbar-right"><span class="status-dot"></span> 本地练习 <span class="top-divider"></span> PC 原型 <span class="version">v0.1</span></div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="side-caption">PRACTICE</div>
+      <div class="nav-active"><span class="nav-icon">▦</span> 练习工作台 <span class="nav-arrow">›</span></div>
+      <div class="side-divider"></div>
+      <div class="side-caption">当前曲目</div>
+      <div class="sidebar-track">
+        <div class="cover-art" aria-hidden="true"><span class="cover-line one"></span><span class="cover-line two"></span><span class="cover-note">♫</span><span class="cover-caption">PRACTICE<br>NO. 01</span></div>
+        <div class="side-track-title" id="sideTitle">节拍练习 · 六键</div>
+        <div class="side-track-sub" id="sideArtist">原创示范谱</div>
+        <div class="side-tags"><span>6 KEY</span><span id="sideBpm">120 BPM</span></div>
+      </div>
+      <div class="side-bottom">
+        <span class="side-bottom-icon">✧</span>
+        <div>放慢一点，也没关系。<small>每一次练习都有意义</small></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="workspace-head">
+        <div><div class="eyebrow">PRACTICE STUDIO <span>/</span> 练习工作台</div><h1>今天，想练习哪一段？</h1><p>选定片段，放慢节奏，找到属于自己的手感。</p></div>
+        <div class="head-note"><span class="head-note-mark">✧</span><span>专注练习<br><strong>慢慢来，稳稳弹</strong></span></div>
+      </div>
+
+      <div class="work-grid">
+        <section class="practice-card">
+          <div class="card-head">
+            <div class="track-heading"><span class="track-icon">♪</span><div><div class="track-kicker">当前练习</div><h2 id="trackTitle">节拍练习 · 六键</h2><div class="track-meta"><span id="trackArtist">原创示范谱</span><span>·</span><span id="trackInfo">120 BPM</span><span>·</span><span>六键</span></div></div></div>
+            <div class="chart-badge"><span></span><span id="sourceTag">示范谱</span></div>
+          </div>
+
+          <div class="stage-wrap" id="stageWrap">
+            <canvas id="stage" aria-label="六轨音符练习区"></canvas>
+            <div class="stage-top"><span>♫ &nbsp; 练习模式</span><span id="stageTime">00:00 / 00:32</span></div>
+            <div id="stageHint" class="stage-hint"><div class="hint-icon">♪</div><strong>准备好了吗？</strong><span>按下开始，跟随节奏手动演奏</span></div>
+            <div id="feedback" class="feedback" aria-live="polite"></div>
+            <div class="stage-foot"><span>KEYBOARD PRACTICE</span><span>♪ &nbsp; LISTEN · FEEL · PLAY</span></div>
+          </div>
+
+          <div class="under-stage">
+            <div class="stats"><div><span>命中</span><strong id="statHits">0 <small>/ 60</small></strong></div><div><span>当前连击</span><strong id="statCombo">0</strong></div><div><span>偏早 / 偏晚</span><strong id="statTiming">0 <small>/</small> 0</strong></div><div><span>漏击</span><strong id="statMiss">0</strong></div></div>
+          </div>
+
+          <div class="transport">
+            <div class="track-progress-head"><span id="elapsed">00:00</span><span id="duration">00:32</span></div>
+            <div class="progress-track"><div id="progressFill"></div></div>
+            <div class="transport-bottom">
+              <div class="transport-controls"><button class="play-button" id="playButton" type="button"><span class="play-icon" id="playIcon">▶</span><span id="playText">开始练习</span></button><button class="reset-button" id="restartButton" type="button" title="回到片段起点">↺ <span>重新开始</span></button></div>
+              <div class="keyboard-hint"><kbd>Space</kbd> 暂停 / 继续</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="control-column">
+          <section class="panel section-panel">
+            <div class="panel-title"><div><span class="panel-index">01</span><h3>片段练习</h3></div><span class="panel-icon">◷</span></div>
+            <p class="panel-description">选出想要反复练习的段落。</p>
+            <div class="range-block"><div class="range-label"><span><b class="range-point">A</b> 起点</span><output id="startOutput">00:00.0</output></div><input id="startRange" type="range" min="0" max="31" value="0" step="0.5" aria-label="练习起点"></div>
+            <div class="range-block end-range"><div class="range-label"><span><b class="range-point end">B</b> 终点</span><output id="endOutput">00:32.0</output></div><input id="endRange" type="range" min="1" max="32" value="32" step="0.5" aria-label="练习终点"></div>
+            <div class="loop-row"><div><strong>区间循环</strong><small>反复练习 A–B 片段</small></div><label class="switch"><input id="loopToggle" type="checkbox" checked><span></span><span class="sr-only">循环练习</span></label></div>
+          </section>
+
+          <section class="panel settings-panel">
+            <div class="panel-title"><div><span class="panel-index">02</span><h3>练习设置</h3></div><span class="panel-icon">⚙</span></div>
+            <div class="setting-label"><span>播放速度</span><strong id="speedLabel">1.00×</strong></div>
+            <div class="segments" id="rateButtons"><button type="button" data-rate="0.5">0.5×</button><button type="button" data-rate="0.75">0.75×</button><button type="button" data-rate="1" class="selected">1.0×</button></div>
+            <div class="setting-label scroll-label"><span>音符流速</span><strong id="scrollLabel">1.0×</strong></div>
+            <input id="scrollSpeed" type="range" min="0.7" max="2" step="0.1" value="1" aria-label="音符下落速度">
+            <div class="offset-row"><div><strong>时间偏移</strong><small>设备延迟可手动调整</small></div><div class="offset-input"><input id="offset" type="number" min="-300" max="300" step="5" value="0" aria-label="时间偏移（毫秒）"><span>ms</span></div></div>
+          </section>
+
+          <section class="panel key-panel">
+            <div class="panel-title"><div><span class="panel-index">03</span><h3>键位设置</h3></div><span class="panel-icon">⌨</span></div>
+            <p class="panel-description">点击键位，再按下想要使用的字母键。</p>
+            <div class="key-grid" id="keyBindings"></div>
+            <div class="key-help" id="keyHelp">左右手各负责三个轨道</div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="workspace-footer">
+        <div><span class="footer-spark">✧</span> 当前使用原创演示内容，判定规则仍在校准中。</div>
+        <div class="import-actions"><input type="file" id="chartFile" accept=".json,application/json" hidden><input type="file" id="audioFile" accept="audio/*" hidden><button type="button" id="demoButton">恢复示范</button><button type="button" id="chartButton">导入谱面</button><button type="button" id="audioButton">选择本地音频</button></div>
+      </div>
+      <div class="message" id="message" role="status" aria-live="polite"></div>
+      <footer class="app-footer">ROMM TRAINER <span>·</span> 独立手动练习原型 <span>·</span> 非官方项目</footer>
+    </main>
+  </div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
