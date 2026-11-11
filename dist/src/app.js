@@ -10,6 +10,7 @@ const els = {
   scroll: $('scrollSpeed'), scrollLabel: $('scrollLabel'), offset: $('offset'), speedLabel: $('speedLabel'),
   rateButtons: $('rateButtons'), keys: $('keyBindings'), keyHelp: $('keyHelp'), elapsed: $('elapsed'),
   duration: $('duration'), stageTime: $('stageTime'), fill: $('progressFill'), hits: $('statHits'),
+  performanceScore: $('performanceScore'), completionValue: $('completionValue'), completionFill: $('completionFill'), completionTrack: $('completionTrack'),
   combo: $('statCombo'), timing: $('statTiming'), miss: $('statMiss'), title: $('trackTitle'), artist: $('trackArtist'),
   info: $('trackInfo'), sideTitle: $('sideTitle'), sideArtist: $('sideArtist'), sideBpm: $('sideBpm'),
   sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect')
@@ -62,6 +63,10 @@ function format(ms, tenths = false) {
   const value = String(Math.floor(seconds / 60)).padStart(2,'0') + ':' + String(seconds % 60).padStart(2,'0');
   return tenths ? value + '.' + Math.floor(safe % 1000 / 100) : value;
 }
+function formatCompletion(value) {
+  const bounded = Math.max(0, Math.min(100, value));
+  return (bounded >= 100 - 1e-8 ? 100 : Math.floor((bounded + 1e-9) * 10) / 10).toFixed(1);
+}
 function setMessage(text, good = false, timeout = 5000) {
   clearTimeout(messageTimer);
   els.message.textContent = text;
@@ -104,6 +109,14 @@ function updateMeta() {
   els.sourceTag.textContent = sourceType === 'demo' ? '示范谱' : '本地谱';
 }
 function updateStats() {
+  const completion = formatCompletion(session.completion);
+  els.performanceScore.textContent = String(Math.floor(session.score + 1e-8));
+  if (els.completionValue.textContent !== '(' + completion + '%)') {
+    els.completionValue.textContent = '(' + completion + '%)';
+    els.completionFill.style.width = completion + '%';
+    els.completionTrack.setAttribute('aria-valuenow', completion);
+    els.completionTrack.setAttribute('aria-valuetext', completion + '%');
+  }
   els.hits.replaceChildren(document.createTextNode(String(session.hits) + ' '));
   const small = document.createElement('small');
   small.textContent = '/ ' + session.states.length;
@@ -138,6 +151,7 @@ function releaseHeldAt(ms) {
 function pause() {
   if (!isPlaying) return;
   const now = audio.currentTime * 1000;
+  session.tick(now);
   audio.pause(); isPlaying = false; previewMs = now;
   els.playText.textContent = '继续练习'; els.playIcon.textContent = '▶';
   updateStats();
@@ -181,18 +195,18 @@ function completePass() {
   session.finishRemaining();
   updateStats();
   if (els.loop.checked && isPlaying) {
-    const hitCount = session.hits, total = session.states.length;
+    const hitCount = session.hits, total = session.states.length, completion = formatCompletion(session.completion);
     session = new Judge(chart,startMs,endMs,rate,offset);
     held.clear();
     audio.currentTime = Math.max(0,startMs - 2000) / 1000;
     if (audio.paused) void audio.play().catch(() => { isPlaying = false; setMessage('请点击继续练习。'); });
-    setMessage('上一轮：命中 ' + hitCount + ' / ' + total + '，继续练习。', true);
+    setMessage('上一轮：完成度 ' + completion + '%，命中 ' + hitCount + ' / ' + total + '。继续练习。', true);
     ending = false;
   } else {
     audio.pause(); isPlaying = false; hasStarted = false;
     previewMs = endMs;
     els.playText.textContent = '再练一次'; els.playIcon.textContent = '▶';
-    setMessage('本段练习完成：命中 ' + session.hits + ' / ' + session.states.length + '。', true, 0);
+    setMessage('本段练习完成：完成度 ' + formatCompletion(session.completion) + '%，命中 ' + session.hits + ' / ' + session.states.length + '。', true, 0);
   }
 }
 function handleRange() {

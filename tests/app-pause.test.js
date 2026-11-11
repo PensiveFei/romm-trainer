@@ -17,12 +17,14 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     blur() {}
     querySelectorAll() { return []; }
     getContext() { return {}; }
+    getBoundingClientRect() { return {width:0,height:0}; }
   }
   const ids=['stage','stageWrap','stageHint','feedback','message','playButton','playText','playIcon','restartButton',
     'startRange','endRange','startOutput','endOutput','loopToggle','scrollSpeed','scrollLabel','offset','speedLabel',
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
-    'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect'];
+    'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
+    'performanceScore','completionValue','completionFill','completionTrack'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true;
   const listeners={};
@@ -35,7 +37,8 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   };
   const settings=new Map();
   globalThis.localStorage={ getItem(key){return settings.get(key) ?? null;}, setItem(key,value){settings.set(key,value);} };
-  globalThis.requestAnimationFrame=()=>0;
+  let nextFrame;
+  globalThis.requestAnimationFrame=(fn)=>{ nextFrame=fn; return 0; };
   class FakeAudio {
     constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
     addEventListener(name,fn){ this.listeners[name]=fn; }
@@ -52,22 +55,40 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.playText.textContent,'暂停');
   testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
+  assert.equal(el.performanceScore.textContent,'20');
+  assert.notEqual(el.completionValue.textContent,'(0.0%)');
+  const completionBeforeTheme=el.completionValue.textContent;
   el.themeSelect.value='electro'; el.themeSelect.dispatch('change');
   assert.equal(el.stageWrap.dataset.theme,'electro');
   assert.equal(settings.get('romm-trainer-theme'),'electro');
   assert.equal(el.playText.textContent,'暂停');
   assert.equal(testAudio.currentTime,2);
+  assert.equal(el.completionValue.textContent,completionBeforeTheme);
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
   testAudio.currentTime=10; press('keydown','KeyA');
   el.themeSelect.value='dream'; el.themeSelect.dispatch('change');
   assert.equal(el.stageWrap.dataset.theme,'dream');
   assert.equal(testAudio.currentTime,10);
   const missesBefore=Number(el.statMiss.textContent);
+  const scoreAtHoldStart=Number(el.performanceScore.textContent);
+  testAudio.currentTime=10.5;
   el.playButton.dispatch('click');
+  assert.ok(Number(el.performanceScore.textContent)>scoreAtHoldStart);
   assert.equal(el.playText.textContent,'继续练习');
-  assert.equal(Number(el.statMiss.textContent),missesBefore);
+  const missesAtPause=Number(el.statMiss.textContent);
+  assert.ok(missesAtPause>=missesBefore);
   el.playButton.dispatch('click'); await flush();
   testAudio.currentTime=11; press('keyup','KeyA');
-  assert.equal(Number(el.statMiss.textContent),missesBefore);
+  assert.equal(Number(el.statMiss.textContent),missesAtPause);
   assert.equal(el.statHits.children[0].textContent.trim(),'2');
+
+  el.endRange.value='12'; el.endRange.dispatch('input');
+  assert.equal(el.completionValue.textContent,'(0.0%)');
+  el.playButton.dispatch('click'); await flush();
+  testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
+  assert.notEqual(el.completionValue.textContent,'(0.0%)');
+  testAudio.currentTime=12; nextFrame();
+  assert.equal(el.completionValue.textContent,'(0.0%)');
+  assert.match(el.message.textContent,/上一轮：完成度 [\d.]+%/);
+  assert.equal(el.playText.textContent,'暂停');
 });

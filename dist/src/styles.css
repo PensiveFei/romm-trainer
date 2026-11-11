@@ -103,6 +103,13 @@ kbd { padding: 3px 5px; border: 1px solid #abaea9; border-radius: 3px; color: #e
 .stage-wrap::after { content: ""; position: absolute; left: -10%; right: -10%; bottom: -20%; height: 34%; border-radius: 50%; border: 1px solid rgba(235, 220, 164, .14); box-shadow: 0 -10px 75px rgba(210, 191, 131, .08); pointer-events: none; }
 #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .stage-top { position: absolute; top: 15px; left: 18px; right: 18px; display: flex; align-items: start; justify-content: space-between; color: rgba(240, 239, 230, .76); font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.completion-track { position:absolute; z-index:1; top:0; left:0; right:0; height:4px; background:rgba(235,230,210,.13); overflow:hidden; pointer-events:none; }
+.completion-track > div { width:0; height:100%; background:linear-gradient(90deg,#e1bd69,#ffdf85); box-shadow:0 0 8px rgba(255,218,125,.65); transition:width .10s linear; }
+.performance-display { display:flex; flex-direction:column; align-items:flex-start; gap:2px; line-height:1.2; text-shadow:0 2px 5px rgba(16,22,33,.55); }
+.performance-display > span { color:rgba(240,239,230,.82); font-size:10px; }
+.performance-display strong { color:#f8dc83; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
+.performance-display em { font-size:13px; font-style:normal; font-weight:600; }
+.stage-status { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
 .stage-mode { color: rgba(232, 232, 221, .72); }
 .combo-display { position: absolute; left: 50%; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; text-shadow: 0 2px 5px rgba(19,28,35,.5); }
 .combo-display strong { color: #f6e9bf; font-family: Georgia, serif; font-size: 27px; font-weight: 400; line-height: 1; }

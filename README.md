@@ -16,7 +16,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
 - **练习设置**：调整音乐播放速度、音符下落速度和时间偏移。
 - **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
-- **练习反馈**：查看命中、连击、漏击以及按键偏早或偏晚的情况。
+- **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
 
 ## Core Features
@@ -25,7 +25,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
 - **Practice settings**: Adjust the music playback rate, note scroll speed, and timing offset independently.
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
-- **Practice feedback**: See hits, combo, misses, and early or late timing.
+- **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
 
 ## 声明
@@ -63,6 +63,12 @@ npm test
 默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume.
+
+## 演奏完成度 | Performance Completion
+
+完成度以当前 A–B 练习区间的可得满分为 100%。本工具暂按以下规则估算：单音或长音开头准确命中得 20 分、普通命中得 10 分；长音按住时，每一拍累计 5 分。提前松开长音时，保留已经获得的分数；谱面未提供 BPM 时按 120 BPM 计算。完成度与播放进度分别显示，每轮循环重新计算。这套练习计分尚未与游戏逐项校准。
+
+Completion is measured against the maximum possible score in the selected A–B section. In this trainer's provisional model, a precise tap or hold head earns 20 points and a good one earns 10; a held note earns 5 points per beat while held. Early release keeps already earned points. Charts without BPM use 120 BPM. Completion is separate from playback progress and resets on each loop. The scoring model has not been calibrated against the game.
 
 ## 本地谱面格式 | Local Chart Format
 
