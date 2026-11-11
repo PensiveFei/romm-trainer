@@ -258,6 +258,37 @@ async function importChart(file) {
 }
 
 function roundRect(x,y,w,h,r) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+function drawStar(x, y, radius, color) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - radius);
+  ctx.quadraticCurveTo(x + radius * .18, y - radius * .18, x + radius, y);
+  ctx.quadraticCurveTo(x + radius * .18, y + radius * .18, x, y + radius);
+  ctx.quadraticCurveTo(x - radius * .18, y + radius * .18, x - radius, y);
+  ctx.quadraticCurveTo(x - radius * .18, y - radius * .18, x, y - radius);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+function drawNote(x, y, radius, isHold) {
+  const base = isHold ? '#8e70e9' : '#efb44f';
+  const light = isHold ? '#c7afff' : '#ffe6a8';
+  ctx.save();
+  ctx.shadowColor = isHold ? 'rgba(155,126,255,.70)' : 'rgba(255,204,101,.62)';
+  ctx.shadowBlur = 13;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isHold ? '#7256c1' : '#c88c3d';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 2.3;
+  ctx.strokeStyle = 'rgba(246,245,235,.90)';
+  ctx.stroke();
+  const fill = ctx.createRadialGradient(x-radius*.3,y-radius*.4,radius*.05,x,y,radius);
+  fill.addColorStop(0,light); fill.addColorStop(.58,base); fill.addColorStop(1,isHold ? '#7354c3' : '#c88d37');
+  ctx.beginPath(); ctx.arc(x,y,radius*.80,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill();
+  ctx.lineWidth=1; ctx.strokeStyle=isHold ? 'rgba(225,213,255,.8)' : 'rgba(255,237,183,.85)'; ctx.stroke();
+  drawStar(x,y,radius*.47,isHold ? '#ded0ff' : '#ffefbc');
+  ctx.restore();
+}
 function renderStage(songMs) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1,2);
@@ -268,46 +299,81 @@ function renderStage(songMs) {
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
-  const left = w * 0.12, usable = w * 0.76, laneWidth = usable / 6, hitY = h - 56;
+  const left = w * 0.10, usable = w * 0.80, laneWidth = usable / 6, hitY = h - 96;
   const travel = 2200 / scrollRate;
-  const pxPerMs = (hitY - 38) / travel;
-  for (let lane=0;lane<6;lane++) {
-    const x = left + lane * laneWidth;
-    ctx.fillStyle = held.has(lane) ? 'rgba(190,225,192,.12)' : 'rgba(225,245,221,.025)';
-    ctx.fillRect(x+2,0,laneWidth-4,hitY);
-    ctx.strokeStyle = 'rgba(199,225,201,.065)';
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,hitY); ctx.stroke();
-    ctx.strokeStyle = held.has(lane) ? 'rgba(229,238,188,.95)' : 'rgba(209,225,198,.52)';
-    ctx.lineWidth = held.has(lane) ? 2 : 1;
-    ctx.beginPath(); ctx.arc(x+laneWidth/2,hitY,Math.min(17,laneWidth*.27),0,Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x+laneWidth/2,hitY,Math.min(12,laneWidth*.19),0,Math.PI*2); ctx.strokeStyle='rgba(218,230,198,.26)'; ctx.stroke();
-    ctx.fillStyle = held.has(lane) ? '#f4e9b7' : '#c3d9c4a8';
-    ctx.font = '600 10px Arial,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(keyLabel(keys[lane]),x+laneWidth/2,hitY+31);
-  }
-  ctx.strokeStyle='rgba(199,225,201,.13)'; ctx.beginPath(); ctx.moveTo(left,hitY); ctx.lineTo(left+usable,hitY); ctx.stroke();
+  const pxPerMs = (hitY - 65) / travel;
   const showTime = songMs - offset * rate;
+  const center = lane => left + lane * laneWidth + laneWidth / 2;
+  const radius = Math.min(21,laneWidth * .26);
+
+  for (let lane=0;lane<6;lane++) {
+    const x = center(lane);
+    const beam = ctx.createLinearGradient(0,75,0,hitY);
+    beam.addColorStop(0,'rgba(233,241,237,0)');
+    beam.addColorStop(.35, held.has(lane) ? 'rgba(255,241,193,.30)' : 'rgba(232,240,237,.14)');
+    beam.addColorStop(1, held.has(lane) ? 'rgba(255,241,193,.78)' : 'rgba(232,240,237,.48)');
+    ctx.strokeStyle=beam; ctx.lineWidth=held.has(lane)?2:1;
+    ctx.beginPath(); ctx.moveTo(x,75); ctx.lineTo(x,hitY); ctx.stroke();
+  }
+
+  // Draw links behind notes that must be pressed simultaneously.
+  const chords = new Map();
+  for (const note of session.states) {
+    if (note.status !== 'pending') continue;
+    const group = chords.get(note.atMs) || [];
+    group.push(note); chords.set(note.atMs,group);
+  }
+  for (const [atMs, notes] of chords) {
+    const y=hitY-(atMs-showTime)*pxPerMs;
+    if (notes.length<2 || y < -30 || y > h+20) continue;
+    const lanes=notes.map(n=>n.lane);
+    ctx.strokeStyle='rgba(255,241,200,.78)'; ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(center(Math.min(...lanes)),y);ctx.lineTo(center(Math.max(...lanes)),y);ctx.stroke();
+  }
+
   for (const note of session.states) {
     if (note.status === 'hit' || note.status === 'miss') continue;
-    const x = left + note.lane*laneWidth + laneWidth/2;
+    const x = center(note.lane);
     const headY = hitY - (note.atMs-showTime)*pxPerMs;
     const tailY = hitY - (note.atMs+note.holdMs-showTime)*pxPerMs;
-    if (headY < -30 || tailY > h+20) continue;
+    if (headY < -radius || tailY > h+radius) continue;
     if (note.holdMs > 0) {
       const shownHead = Math.min(hitY,headY);
-      const top = Math.max(-30,tailY);
+      const top = Math.max(-radius,tailY);
       if (shownHead > top) {
-        const grad=ctx.createLinearGradient(0,top,0,shownHead);
-        grad.addColorStop(0,'rgba(197,226,187,.18)');grad.addColorStop(1,'rgba(211,233,195,.78)');
-        ctx.fillStyle=grad;roundRect(x-Math.min(11,laneWidth*.16),top,Math.min(22,laneWidth*.32),shownHead-top,8);ctx.fill();
+        const width = radius * 1.25;
+        const ribbon=ctx.createLinearGradient(x-width/2,0,x+width/2,0);
+        ribbon.addColorStop(0,'rgba(171,146,255,.22)');
+        ribbon.addColorStop(.45,'rgba(164,140,255,.52)');
+        ribbon.addColorStop(1,'rgba(202,186,255,.22)');
+        ctx.fillStyle=ribbon;ctx.fillRect(x-width/2,top,width,shownHead-top);
+        ctx.strokeStyle='rgba(212,203,255,.45)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(x-width/2,top);ctx.lineTo(x-width/2,shownHead);
+        ctx.moveTo(x+width/2,top);ctx.lineTo(x+width/2,shownHead);ctx.stroke();
       }
     }
-    if (note.status === 'pending') {
-      const width = Math.min(37,laneWidth*.57);
-      ctx.shadowColor='rgba(224,242,200,.55)';ctx.shadowBlur=10;
-      ctx.fillStyle='#e0e8c8';roundRect(x-width/2,headY-5,width,10,5);ctx.fill();
-      ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,241,.7)';roundRect(x-width/2+4,headY-4,width-8,2,1);ctx.fill();
-    }
+    if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0);
+  }
+
+  ctx.save();
+  ctx.shadowColor='rgba(255,232,173,.5)';ctx.shadowBlur=8;
+  ctx.strokeStyle='rgba(236,231,204,.76)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(center(0),hitY);ctx.lineTo(center(5),hitY);ctx.stroke();
+  ctx.restore();
+  for (let lane=0;lane<6;lane++) {
+    const x=center(lane);
+    ctx.save();
+    if (held.has(lane)) {ctx.shadowColor='#ffe0a0';ctx.shadowBlur=18;}
+    ctx.beginPath();ctx.arc(x,hitY,13,0,Math.PI*2);
+    ctx.fillStyle='rgba(226,219,192,.17)';ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(234,234,223,.32)';ctx.stroke();
+    ctx.beginPath();ctx.arc(x,hitY,8,0,Math.PI*2);
+    ctx.fillStyle=held.has(lane)?'#ffe5a5':'#f0eee5';ctx.fill();
+    ctx.restore();
+    const keyWidth=Math.min(25,laneWidth*.55);
+    ctx.fillStyle='rgba(247,246,239,.94)';roundRect(x-keyWidth/2,hitY+27,keyWidth,23,3);ctx.fill();
+    ctx.fillStyle='#2b3340';ctx.font='700 12px "Microsoft YaHei",sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(keyLabel(keys[lane]),x,hitY+39);
   }
 }
 function frame() {
