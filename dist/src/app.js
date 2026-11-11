@@ -1,5 +1,5 @@
 import { demoChart, validateChart, validateRange } from './chart.js';
-import { Judge } from './judge.js';
+import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -8,6 +8,7 @@ const els = {
   play: $('playButton'), playText: $('playText'), playIcon: $('playIcon'), restart: $('restartButton'),
   start: $('startRange'), end: $('endRange'), startOut: $('startOutput'), endOut: $('endOutput'), loop: $('loopToggle'),
   scroll: $('scrollSpeed'), scrollLabel: $('scrollLabel'), offset: $('offset'), speedLabel: $('speedLabel'),
+  hitWindow: $('hitWindow'), hitWindowLabel: $('hitWindowLabel'),
   rateButtons: $('rateButtons'), keys: $('keyBindings'), keyHelp: $('keyHelp'), elapsed: $('elapsed'),
   duration: $('duration'), stageTime: $('stageTime'), fill: $('progressFill'), hits: $('statHits'),
   performanceScore: $('performanceScore'), completionValue: $('completionValue'), completionFill: $('completionFill'), completionTrack: $('completionTrack'),
@@ -24,8 +25,9 @@ let sourceType = 'demo';
 let rate = 1;
 let scrollRate = 1;
 let offset = 0;
+let hitWindowMs = DEFAULT_HIT_WINDOW_MS;
 let startMs = 0, endMs = chart.durationMs;
-let session = new Judge(chart, startMs, endMs, rate, offset);
+let session;
 let audioReady = false, isPlaying = false, hasStarted = false, ending = false, audioUrl = null;
 let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
@@ -36,6 +38,8 @@ const canvas = els.stage;
 const ctx = canvas.getContext('2d');
 
 try {
+  const savedWindow = Number(localStorage.getItem('romm-trainer-hit-window'));
+  if (savedWindow >= 120 && savedWindow <= 240) hitWindowMs = savedWindow;
   const savedTheme = localStorage.getItem('romm-trainer-theme');
   if (Object.hasOwn(THEMES, savedTheme)) themeId = savedTheme;
   const stored = JSON.parse(localStorage.getItem('romm-trainer-keys') || 'null');
@@ -45,7 +49,10 @@ try {
   const savedOffset = Number(localStorage.getItem('romm-trainer-offset'));
   if (savedOffset >= -300 && savedOffset <= 300) offset = savedOffset;
 } catch { /* Local settings are optional. */ }
+session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
 applyTheme(themeId, false);
+els.hitWindow.value = hitWindowMs;
+els.hitWindowLabel.textContent = '±' + hitWindowMs + ' ms';
 els.scroll.value = scrollRate;
 els.scrollLabel.textContent = scrollRate.toFixed(1) + '×';
 els.offset.value = offset;
@@ -84,8 +91,9 @@ function setMessage(text, good = false, timeout = 5000) {
   els.message.classList.toggle('success', good);
   if (timeout) messageTimer = setTimeout(() => { els.message.textContent = ''; }, timeout);
 }
-function flash(text) {
+function flash(text, kind = 'hit') {
   clearTimeout(feedbackTimer);
+  els.feedback.dataset.kind = kind;
   els.feedback.textContent = text;
   els.feedback.classList.add('visible');
   feedbackTimer = setTimeout(() => els.feedback.classList.remove('visible'), 550);
@@ -170,7 +178,7 @@ function pause() {
 function resetSession() {
   if (isPlaying) pause();
   held.clear(); hitEffects.length = 0; ending = false; hasStarted = false;
-  session = new Judge(chart,startMs,endMs,rate,offset);
+  session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
   previewMs = Math.max(0,startMs - 2000);
   if (audioReady) {
     try { audio.currentTime = previewMs / 1000; } catch { /* Seeking before metadata can be unavailable. */ }
@@ -184,7 +192,7 @@ async function play() {
   if (!audioReady) { setMessage('请先选择与当前谱面配套的本地音频。', false, 0); return; }
   setDrawerOpen(false);
   if (!hasStarted) {
-    session = new Judge(chart,startMs,endMs,rate,offset);
+    session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
     audio.currentTime = Math.max(0,startMs - 2000) / 1000;
     hasStarted = true;
   }
@@ -208,7 +216,7 @@ function completePass() {
   updateStats();
   if (els.loop.checked && isPlaying) {
     const hitCount = session.hits, total = session.states.length, completion = formatCompletion(session.completion);
-    session = new Judge(chart,startMs,endMs,rate,offset);
+    session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
     held.clear();
     audio.currentTime = Math.max(0,startMs - 2000) / 1000;
     if (audio.paused) void audio.play().catch(() => { isPlaying = false; setMessage('请点击继续练习。'); });
@@ -402,16 +410,19 @@ function renderStage(songMs) {
   for (let i=hitEffects.length-1;i>=0;i--) {
     const effect=hitEffects[i], progress=(effectTime-effect.started)/700;
     if (progress>=1) hitEffects.splice(i,1);
-    else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress);
+    else if (effect.unmatched) {
+      ctx.save();ctx.globalAlpha=(1-progress)*.7;ctx.strokeStyle='#ffd0bd';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(center(effect.lane),hitY,radius*(.55+progress),0,Math.PI*2);ctx.stroke();ctx.restore();
+    } else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress);
   }
   for (let lane=0;lane<6;lane++) {
     const x=center(lane);
     ctx.save();
     if (held.has(lane)) {ctx.shadowColor=currentTheme.accent;ctx.shadowBlur=18;}
-    ctx.beginPath();ctx.arc(x,hitY,13,0,Math.PI*2);
+    ctx.beginPath();ctx.arc(x,hitY,17,0,Math.PI*2);
     ctx.fillStyle='rgba(226,219,192,.17)';ctx.fill();
     ctx.lineWidth=1;ctx.strokeStyle='rgba(234,234,223,.32)';ctx.stroke();
-    ctx.beginPath();ctx.arc(x,hitY,8,0,Math.PI*2);
+    ctx.beginPath();ctx.arc(x,hitY,9,0,Math.PI*2);
     ctx.fillStyle=held.has(lane)?currentTheme.accent:'#f0eee5';ctx.fill();
     ctx.restore();
     const keyWidth=Math.min(25,laneWidth*.55);
@@ -424,7 +435,9 @@ function renderStage(songMs) {
 function frame() {
   let now = isPlaying ? audio.currentTime*1000 : previewMs;
   if (isPlaying) {
+    const previousMisses = session.misses;
     session.tick(now);
+    if (session.misses > previousMisses) flash('漏击', 'miss');
     if (now >= endMs) { completePass(); now = isPlaying ? audio.currentTime*1000 : endMs; }
     updateStats();
   }
@@ -443,6 +456,17 @@ els.loop.addEventListener('change',() => { if (isPlaying) pause(); resetSession(
 els.scroll.addEventListener('input',() => {
   scrollRate=Number(els.scroll.value); els.scrollLabel.textContent=scrollRate.toFixed(1)+'×';
   try { localStorage.setItem('romm-trainer-scroll',String(scrollRate)); } catch {}
+});
+els.hitWindow.addEventListener('input',() => {
+  els.hitWindowLabel.textContent='±'+els.hitWindow.value+' ms';
+});
+els.hitWindow.addEventListener('change',() => {
+  const n=Number(els.hitWindow.value);
+  hitWindowMs=Number.isFinite(n)?Math.max(120,Math.min(240,n)):DEFAULT_HIT_WINDOW_MS;
+  els.hitWindow.value=hitWindowMs;els.hitWindowLabel.textContent='±'+hitWindowMs+' ms';
+  try { localStorage.setItem('romm-trainer-hit-window',String(hitWindowMs)); } catch {}
+  resetSession();
+  setMessage('判定范围已调整为前后 '+hitWindowMs+' ms，已回到片段起点。',true);
 });
 els.offset.addEventListener('change',() => {
   const n=Number(els.offset.value); offset=Number.isFinite(n)?Math.max(-300,Math.min(300,n)):0;
@@ -485,12 +509,16 @@ window.addEventListener('keydown',(event) => {
   event.preventDefault();
   if (held.has(lane)) return;
   held.add(lane);
-  const note=session.press(lane,audio.currentTime*1000);
+  const songMs=audio.currentTime*1000;
+  const note=session.press(lane,songMs);
+  hitEffects.push({ lane, started:performance.now(), unmatched:!note });
+  if (hitEffects.length > 24) hitEffects.shift();
   if (note) {
-    hitEffects.push({ lane, started:performance.now() });
-    if (hitEffects.length > 24) hitEffects.shift();
     const e=Math.round(note.errorMs);
     flash(note.grade === 'precise' ? '准确' : (e < 0 ? '偏早 ' : '偏晚 ') + Math.abs(e) + ' ms');
+  } else {
+    const error=session.timingHint(lane,songMs);
+    flash(error === null ? '未命中' : '未命中 · ' + (error < 0 ? '过早 ' : '过晚 ') + Math.round(Math.abs(error)) + ' ms','miss');
   }
   updateStats();
 });
@@ -500,7 +528,7 @@ window.addEventListener('keyup',(event)=>{
   if (held.has(lane)) {
     held.delete(lane);
     const note=session.release(lane,isPlaying ? audio.currentTime*1000 : previewMs);
-    if (note && note.status === 'miss') flash('长按提前松开');
+    if (note && note.status === 'miss') flash('长按提前松开','miss');
     updateStats();
   }
 });

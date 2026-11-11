@@ -45,3 +45,34 @@ test('invalid overlapping lane inputs are rejected', () => {
     {atMs:1000,lane:0,holdMs:1000},{atMs:1500,lane:0,holdMs:0}
   ]}), /重叠/);
 });
+
+test('the default window accepts slightly early and late hits but misses outside its boundary', () => {
+  for (const time of [820, 1180]) {
+    const j=new Judge(chart,0,8000);
+    const note=j.press(0,time);
+    assert.equal(note?.grade,'good');
+    assert.equal(j.hits,1);
+  }
+  const early=new Judge(chart,0,8000);
+  assert.equal(early.press(0,819),null);
+  assert.equal(early.states[0].status,'pending');
+  assert.equal(early.timingHint(0,819),-181);
+  const late=new Judge(chart,0,8000);
+  assert.equal(late.press(0,1181),null);
+  assert.equal(late.states[0].status,'miss');
+  assert.equal(late.timingHint(0,1181),181);
+  assert.equal(late.timingHint(5,1181),null);
+});
+
+test('adjustable timing range applies to misses and keeps real-time scaling', () => {
+  const strict=new Judge(chart,0,8000,1,0,130);
+  assert.equal(strict.press(0,850),null);
+  assert.equal(strict.states[0].status,'pending');
+  assert.equal(strict.press(0,900)?.grade,'good');
+  const wide=new Judge(chart,0,8000,1,0,220);
+  wide.tick(1200);
+  assert.equal(wide.states[0].status,'pending');
+  assert.equal(wide.press(0,1200)?.grade,'good');
+  const slow=new Judge(chart,0,8000,.5,20);
+  assert.equal(slow.press(0,920)?.grade,'good');
+});

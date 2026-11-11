@@ -29,10 +29,21 @@ test('timing affects head score, and an early release retains only earned sustai
   j.tick(4000); assert.equal(j.score,35);
 });
 
-test('the existing release window completes a held note without losing the tail', () => {
+test('the default release window completes a held note without losing the tail', () => {
   const j=new Judge(chart,0,4000);
-  j.press(0,1000); j.press(1,2000); j.release(1,2900);
+  j.press(0,1000); j.press(1,2000); j.release(1,2820);
   assert.equal(j.score,50); assert.equal(j.completion,100);
+});
+
+test('release tolerance follows the adjustable window and early release preserves earned points', () => {
+  const strict=new Judge(chart,0,4000,1,0,130);
+  strict.press(1,2000); strict.release(1,2850);
+  assert.equal(strict.states[1].status,'miss');
+  assert.ok(strict.score>20 && strict.score<30);
+  const wide=new Judge(chart,0,4000,1,0,220);
+  wide.press(1,2000); wide.release(1,2800);
+  assert.equal(wide.states[1].status,'hit');
+  assert.equal(wide.score,30);
 });
 
 test('missing all notes earns nothing, and a selected section has its own full score', () => {

@@ -116,6 +116,9 @@
           <div class="segments" id="rateButtons"><button type="button" data-rate="0.5">0.5×</button><button type="button" data-rate="0.75">0.75×</button><button type="button" data-rate="1" class="selected">1.0×</button></div>
           <div class="setting-label scroll-label"><span>音符流速</span><strong id="scrollLabel">1.0×</strong></div>
           <input id="scrollSpeed" type="range" min="0.7" max="2" step="0.1" value="1" aria-label="音符下落速度">
+          <div class="setting-label hit-window-label"><span>判定范围</span><strong id="hitWindowLabel">±180 ms</strong></div>
+          <input id="hitWindow" type="range" min="120" max="240" step="10" value="180" aria-label="判定范围（毫秒）" aria-describedby="hitWindowHelp">
+          <p class="setting-help" id="hitWindowHelp">前后容许时间，调大更宽松</p>
           <div class="offset-row"><div><strong>时间偏移</strong><small>正值使判定稍后</small></div><div class="offset-input"><input id="offset" type="number" min="-300" max="300" step="5" value="0" aria-label="时间偏移（毫秒）"><span>ms</span></div></div>
         </section>
         <section class="panel key-panel">

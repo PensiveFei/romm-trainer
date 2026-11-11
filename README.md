@@ -14,7 +14,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 - **PC 手动练习**：六键键盘操作，支持单点、同时按和长按，并可自定义键位。
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
-- **练习设置**：调整音乐播放速度、音符下落速度和时间偏移。
+- **练习设置**：调整音乐播放速度、音符下落速度、判定范围和时间偏移。
 - **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
@@ -23,7 +23,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 - **Manual PC practice**: Play six lanes with configurable keyboard bindings, including taps, simultaneous notes, and holds.
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
-- **Practice settings**: Adjust the music playback rate, note scroll speed, and timing offset independently.
+- **Practice settings**: Adjust the music playback rate, note scroll speed, hit window, and timing offset independently.
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
@@ -63,6 +63,12 @@ npm test
 默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。点击右上角「曲谱与设置」可导入文件、调整练习区间和键位。
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
+
+## 判定范围 | Hit Window
+
+默认接受音符前后 180 毫秒内的按键，可在「曲谱与设置」中调整为前后 120–240 毫秒；准确判定仍使用前后 55 毫秒。长音在结束前的同一范围内松开仍可完成。超出范围的按键会显示未命中和附近音符的偏早或偏晚时间，不会额外增加漏击次数。调整范围会从当前片段起点重新练习，设置保存在本机。
+
+The default hit window is ±180 ms and can be adjusted from ±120 to ±240 ms in the settings. The precise window remains ±55 ms, and holds can be released within the same window before their end. Inputs outside the window receive feedback without adding an extra miss. Changing the window restarts the current section, and the setting is stored locally.
 
 ## 演奏完成度 | Performance Completion
 

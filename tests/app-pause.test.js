@@ -24,7 +24,8 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
-    'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose'];
+    'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
+    'hitWindow','hitWindowLabel'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
   const listeners={};
@@ -59,6 +60,10 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.toolsDrawer.hidden,true);
   el.playButton.dispatch('click'); await flush();
   assert.equal(el.playText.textContent,'暂停');
+  assert.equal(el.hitWindowLabel.textContent,'±180 ms');
+  testAudio.currentTime=1.7; press('keydown','KeyA'); press('keyup','KeyA');
+  assert.equal(el.feedback.textContent,'未命中 · 过早 300 ms');
+  assert.equal(el.performanceScore.textContent,'0');
   testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
   assert.equal(el.performanceScore.textContent,'20');
@@ -99,4 +104,14 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.completionValue.textContent,'(0.0%)');
   assert.match(el.message.textContent,/上一轮：完成度 [\d.]+%/);
   assert.equal(el.playText.textContent,'暂停');
+
+  el.toolsToggle.dispatch('click');
+  el.hitWindow.value='220'; el.hitWindow.dispatch('input');
+  assert.equal(el.hitWindowLabel.textContent,'±220 ms');
+  el.hitWindow.dispatch('change');
+  assert.equal(settings.get('romm-trainer-hit-window'),'220');
+  el.playButton.dispatch('click'); await flush();
+  testAudio.currentTime=1.8; press('keydown','KeyA'); press('keyup','KeyA');
+  assert.equal(el.performanceScore.textContent,'10');
+  assert.equal(el.statHits.children[0].textContent.trim(),'1');
 });

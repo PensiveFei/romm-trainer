@@ -1,11 +1,13 @@
 // Judgements and scoring are a trainer approximation, not a claim of game parity.
 const PRECISE_POINTS = 20, GOOD_POINTS = 10, HOLD_POINTS_PER_BEAT = 5;
+export const DEFAULT_HIT_WINDOW_MS = 180;
 export class Judge {
-  constructor(chart, startMs, endMs, rate = 1, offsetMs = 0) {
+  constructor(chart, startMs, endMs, rate = 1, offsetMs = 0, hitWindowMs = DEFAULT_HIT_WINDOW_MS) {
     this.startMs = startMs;
     this.endMs = endMs;
     this.rate = rate;
     this.offsetMs = offsetMs;
+    this.hitWindowMs = Number.isFinite(hitWindowMs) ? Math.max(120, Math.min(240, hitWindowMs)) : DEFAULT_HIT_WINDOW_MS;
     this.states = chart.notes.filter(n => n.atMs >= startMs && n.atMs < endMs && n.atMs + n.holdMs <= endMs)
       .map(n => ({ ...n, status: 'pending', errorMs: null, grade: null }));
     this.hits = 0; this.misses = 0; this.early = 0; this.late = 0; this.combo = 0; this.maxCombo = 0;
@@ -24,6 +26,16 @@ export class Judge {
   }
   correctedTime(songMs) { return songMs - this.offsetMs * this.rate; }
   realError(songMs, noteMs) { return (this.correctedTime(songMs) - noteMs) / this.rate; }
+  timingHint(lane, songMs) {
+    let closest = null;
+    for (const note of this.states) {
+      if (note.lane !== lane || (note.status !== 'pending' && note.status !== 'miss')) continue;
+      const error = this.realError(songMs, note.atMs);
+      if (note.status === 'miss' && error <= 0) continue;
+      if (Math.abs(error) <= 600 && (closest === null || Math.abs(error) < Math.abs(closest))) closest = error;
+    }
+    return closest;
+  }
   finish(state) {
     if (state.status === 'hit' || state.status === 'miss') return;
     state.status = 'hit'; this.hits++; this.combo++; this.maxCombo = Math.max(this.combo, this.maxCombo);
@@ -37,7 +49,7 @@ export class Judge {
   tick(songMs) {
     const now = this.correctedTime(songMs);
     for (const note of this.states) {
-      if (note.status === 'pending' && this.realError(songMs, note.atMs) > 130) this.miss(note);
+      if (note.status === 'pending' && this.realError(songMs, note.atMs) > this.hitWindowMs) this.miss(note);
       if (note.status === 'holding') {
         this.creditHold(note, now);
         if (now >= note.atMs + note.holdMs) this.finish(note);
@@ -51,7 +63,7 @@ export class Judge {
     for (const note of this.states) {
       if (note.lane !== lane || note.status !== 'pending') continue;
       const e = this.realError(songMs, note.atMs);
-      if (Math.abs(e) <= 130 && Math.abs(e) < Math.abs(error)) { best = note; error = e; }
+      if (Math.abs(e) <= this.hitWindowMs && Math.abs(e) < Math.abs(error)) { best = note; error = e; }
     }
     if (!best) return null;
     best.errorMs = error;
@@ -67,7 +79,7 @@ export class Judge {
     const correctedMs = this.correctedTime(songMs);
     const remainingRealMs = (note.atMs + note.holdMs - correctedMs) / this.rate;
     this.creditHold(note, correctedMs);
-    if (remainingRealMs > 100) this.miss(note);
+    if (remainingRealMs > this.hitWindowMs) this.miss(note);
     else { this.creditHold(note, note.atMs + note.holdMs); this.finish(note); }
     return note;
   }
