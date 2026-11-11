@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 test('pausing a held note keeps it valid while the key remains down', async () => {
   class FakeElement {
@@ -25,7 +26,8 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
     'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
-    'hitWindow','hitWindowLabel'];
+    'hitWindow','hitWindowLabel','songButton','songOptions','onlinePanel','songAudioStatus','musicStart',
+    'onlineButton','metronomeButton','youtubePlayer','youtubeMount'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
   const listeners={};
@@ -114,4 +116,53 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   testAudio.currentTime=1.8; press('keydown','KeyA'); press('keyup','KeyA');
   assert.equal(el.performanceScore.textContent,'10');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
+
+  const song = JSON.parse(await readFile(new URL('../dist/data/surasthana-legend.json', import.meta.url), 'utf8'));
+  globalThis.fetch = async () => ({ok:true, async json(){return song;}});
+  globalThis.location = {origin:'http://localhost'};
+  let youtube;
+  window.YT={Player:class {
+    constructor(_element,options){
+      this.options=options; this.time=2582; youtube=this;
+      queueMicrotask(()=>options.events.onReady());
+    }
+    setPlaybackRate(value){this.rate=value;}
+    getCurrentTime(){return this.time;}
+    seekTo(value){this.time=value;}
+    playVideo(){this.options.events.onStateChange({data:1});}
+    pauseVideo(){this.options.events.onStateChange({data:2});}
+  }};
+  el.songButton.dispatch('click'); await flush(); await flush();
+  assert.equal(el.trackTitle.textContent,'净善的遐歌');
+  assert.equal(el.statHits.children[0].textContent.trim(),'0');
+  assert.equal(el.statHits.children[1].textContent,'/ 231');
+  assert.equal(el.onlinePanel.hidden,false);
+  assert.match(el.songAudioStatus.textContent,/同步待校准/);
+  el.endRange.value='6'; el.endRange.dispatch('input');
+  el.musicStart.value='5.25'; el.musicStart.dispatch('change');
+  assert.equal(youtube.time,2582+5.25);
+  el.playButton.dispatch('click'); await flush();
+  assert.equal(el.playText.textContent,'暂停');
+  nextFrame();
+  youtube.time=2582+5.25+4.405; press('keydown','KeyD');
+  youtube.time=2582+5.25+4.94; press('keyup','KeyD');
+  assert.equal(el.statHits.children[0].textContent.trim(),'1');
+  youtube.time=2582+5.25+6.1; nextFrame();
+  assert.equal(youtube.time,2582+5.25);
+  assert.match(el.message.textContent,/上一轮：完成度/);
+  el.toolsToggle.dispatch('click');
+  assert.equal(el.playText.textContent,'继续练习');
+  const previousPlayer=youtube;
+  youtube.options.events.onError({data:2});
+  assert.match(el.message.textContent,/在线音源不可用/);
+  el.onlineButton.dispatch('click'); await flush(); await flush();
+  assert.notEqual(youtube,previousPlayer);
+  assert.match(el.message.textContent,/谱面已就绪/);
+  testAudio.duration=95;
+  el.metronomeButton.dispatch('click');
+  assert.equal(el.onlinePanel.hidden,true);
+  assert.match(el.songAudioStatus.textContent,/节拍伴奏/);
+  el.playButton.dispatch('click'); await flush();
+  assert.equal(el.playText.textContent,'暂停');
+  assert.equal(testAudio.paused,false);
 });

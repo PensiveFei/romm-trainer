@@ -18,6 +18,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
+- **单曲试验**：收录《净善的遐歌》传说难度的六轨练习谱，可选择官方在线原声、节拍伴奏或本地音频；在线原声与游戏内剪辑的同步仍待校准。
 
 ## Core Features
 
@@ -27,6 +28,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
+- **Single-song trial**: Practice the six-lane Legendary chart for “Surasthana Fantasia” with an official online soundtrack, a metronome, or local audio. Alignment with the in-game edit is still provisional.
 
 ## 声明
 
@@ -64,6 +66,16 @@ npm test
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
 
+## 《净善的遐歌》试练 | Surasthana Fantasia Trial
+
+打开「曲谱与设置」，选择「净善的遐歌 · 传说」即可载入 168 BPM、231 音符的六轨谱面。谱面依据[千音雅集乐谱仓库](https://md-ndv356.github.io/genshin-rmm/zh_cn/_GMusic16/legend/)的公开资料转换，包含单音和长音。
+
+默认尝试通过 YouTube 官方播放器播放《原神》[闪耀的群星 3 原声专辑](https://www.youtube.com/watch?v=2SvpviExw1o&t=2582s)，曲目从专辑约 43:02 开始。网络、地区和播放器策略可能影响播放。该专辑版长于游戏内的 1 分 35 秒版本，目前尚未确认剪辑是否完全一致；可在设置中调整「音源起点」，但不能保证整首歌自动对齐。也可选择不含歌曲的 168 BPM 节拍伴奏，或选择自己准备的配套本地音频。
+
+The chart is adapted from the public [score database](https://md-ndv356.github.io/genshin-rmm/en_us/_GMusic16/legend/). The default online source uses the official album video, which is longer than the in-game edit; full-song synchronization is not yet verified. Availability depends on the network and region. A metronome and a user-provided local audio file are available as alternatives.
+
+歌曲、原声及相关游戏内容的权利归其各自权利人所有；项目的 MIT 许可不授予这些第三方内容的权利。Song, soundtrack, and game-content rights remain with their respective owners; the project's MIT license does not grant rights to third-party content.
+
 ## 判定范围 | Hit Window
 
 默认接受音符前后 180 毫秒内的按键，可在「曲谱与设置」中调整为前后 120–240 毫秒；准确判定仍使用前后 55 毫秒。长音在结束前的同一范围内松开仍可完成。超出范围的按键会显示未命中和附近音符的偏早或偏晚时间，不会额外增加漏击次数。调整范围会从当前片段起点重新练习，设置保存在本机。
@@ -97,6 +109,6 @@ Charts use UTF-8 JSON. Times are in milliseconds and the six lanes are numbered 
 }
 ```
 
-当前版本为早期原型：内置示范谱与节拍伴奏均为原创，不是游戏原谱；判定规则尚未与游戏逐项校准。项目不包含官方曲谱或音乐，也不支持从游戏分享码读取谱面。
+当前版本为早期原型：示范谱与节拍伴奏为原创；判定规则尚未与游戏逐项校准。项目不内置歌曲音频，也不支持从游戏分享码读取谱面。
 
-This is an early prototype. Its sample chart and rhythm backing are original; judgement has not yet been calibrated against the game. Official charts and music are not included, and in-game sharing codes cannot be imported.
+This is an early prototype. Its sample chart and metronome are original; judgement has not yet been calibrated against the game. No song audio is bundled, and in-game sharing codes cannot be imported.
