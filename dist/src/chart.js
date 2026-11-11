@@ -33,7 +33,17 @@ export function validateChart(value) {
     last[note.lane] = note;
   }
   const bpm = Number.isFinite(value.bpm) && value.bpm > 0 && value.bpm <= 400 ? value.bpm : null;
-  return { version: 1, title, artist: typeof value.artist === 'string' ? value.artist.trim().slice(0,80) : '', durationMs: value.durationMs, bpm, laneCount: 6, notes };
+  let tempoMap;
+  if (value.tempoMap !== undefined) {
+    if (!Array.isArray(value.tempoMap) || !value.tempoMap.length || value.tempoMap.length > 1000) throw new Error('变速信息无效。');
+    tempoMap = value.tempoMap.map((entry, index) => {
+      if (!entry || !Number.isFinite(entry.atMs) || entry.atMs < 0 || entry.atMs >= value.durationMs || !Number.isFinite(entry.bpm) || entry.bpm <= 0 || entry.bpm > 400 || (index === 0 && entry.atMs !== 0) || (index > 0 && entry.atMs <= value.tempoMap[index - 1].atMs)) throw new Error('变速信息的时间或速度无效。');
+      return { atMs: entry.atMs, bpm: entry.bpm };
+    });
+  }
+  const beatTimesMs = value.beatTimesMs;
+  if (beatTimesMs !== undefined && (!Array.isArray(beatTimesMs) || beatTimesMs.length > 5000 || beatTimesMs.some((time, index) => !Number.isFinite(time) || time < 0 || time >= value.durationMs || (index > 0 && time <= beatTimesMs[index - 1])))) throw new Error('节拍信息无效。');
+  return { version: 1, title, artist: typeof value.artist === 'string' ? value.artist.trim().slice(0,80) : '', durationMs: value.durationMs, bpm, laneCount: 6, notes, ...(tempoMap && {tempoMap}), ...(beatTimesMs && {beatTimesMs: [...beatTimesMs]}) };
 }
 
 export const demoChart = validateChart({

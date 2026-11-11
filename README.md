@@ -18,7 +18,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
-- **单曲试验**：收录《净善的遐歌》传说难度的六轨练习谱，可选择官方在线原声、节拍伴奏或本地音频；在线原声与游戏内剪辑的同步仍待校准。
+- **曲目典藏**：按专辑浏览或搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
+- **伴奏选择**：部分曲目提供官方在线原声入口；也可使用节拍伴奏或自行选择本地音频。在线原声与游戏内剪辑的同步仍待逐首校准。
 
 ## Core Features
 
@@ -28,7 +29,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
-- **Single-song trial**: Practice the six-lane Legendary chart for “Surasthana Fantasia” with an official online soundtrack, a metronome, or local audio. Alignment with the in-game edit is still provisional.
+- **Song library**: Browse or search 150 titles by album, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
+- **Accompaniment**: Some songs link to an official online soundtrack; a metronome or user-selected local audio is also available. Alignment with each in-game edit remains provisional.
 
 ## 声明
 
@@ -62,9 +64,15 @@ npm start
 npm test
 ```
 
-默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。点击右上角「曲谱与设置」可导入文件、调整练习区间和键位。
+默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。打开「全部曲目」选择歌曲；点击右上角「曲谱与设置」可导入文件、调整练习区间和键位。
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
+
+## 曲目典藏 | Song Library
+
+曲目与试验谱依据[千音雅集乐谱仓库](https://md-ndv356.github.io/genshin-rmm/zh_cn/)的公开资料转换；当前仅开放传说难度。通过结构检查不等于已经与游戏逐音核对，包含变速的谱面及音源同步尤其需要继续验证。22 首未开放的曲目会在列表中显示状态。部分游戏封面素材来自 [Genshin Impact Wiki](https://genshin-impact.fandom.com/wiki/Repertoire_of_Myriad_Melodies)，未找到对应封面的曲目使用占位图。
+
+The trial charts are converted from the public [score repository](https://md-ndv356.github.io/genshin-rmm/en_us/); only Legendary difficulty is currently available. Structural checks do not establish note-by-note parity with the game. Variable-tempo charts and synchronization still need verification. Some cover images are sourced from the [Genshin Impact Wiki](https://genshin-impact.fandom.com/wiki/Repertoire_of_Myriad_Melodies); songs without an identified cover use a placeholder.
 
 ## 《净善的遐歌》试练 | Surasthana Fantasia Trial
 

@@ -11,16 +11,24 @@ export class Judge {
     this.states = chart.notes.filter(n => n.atMs >= startMs && n.atMs < endMs && n.atMs + n.holdMs <= endMs)
       .map(n => ({ ...n, status: 'pending', errorMs: null, grade: null }));
     this.hits = 0; this.misses = 0; this.early = 0; this.late = 0; this.combo = 0; this.maxCombo = 0;
-    this.holdPointsPerMs = HOLD_POINTS_PER_BEAT / (60000 / (chart.bpm || 120));
-    this.maxScore = this.states.reduce((total,note) => total + PRECISE_POINTS + note.holdMs * this.holdPointsPerMs, 0);
+    this.tempoMap = chart.tempoMap || [{atMs: 0, bpm: chart.bpm || 120}];
+    this.maxScore = this.states.reduce((total,note) => total + PRECISE_POINTS + this.holdPoints(note.atMs, note.atMs + note.holdMs), 0);
     this.score = 0;
+  }
+  holdPoints(start, end) {
+    let total = 0;
+    for (let i = 0; i < this.tempoMap.length; i++) {
+      const segment = this.tempoMap[i], next = this.tempoMap[i + 1]?.atMs ?? Infinity;
+      total += Math.max(0, Math.min(end, next) - Math.max(start, segment.atMs)) * segment.bpm / 60000 * HOLD_POINTS_PER_BEAT;
+    }
+    return total;
   }
   get completion() { return this.maxScore > 0 ? Math.min(100, this.score / this.maxScore * 100) : 0; }
   creditHold(note, correctedMs) {
     const playedMs = Math.max(0, Math.min(note.holdMs, correctedMs - note.atMs));
     const creditedMs = note.creditedHoldMs || 0;
     if (playedMs > creditedMs) {
-      this.score += (playedMs - creditedMs) * this.holdPointsPerMs;
+      this.score += this.holdPoints(note.atMs + creditedMs, note.atMs + playedMs);
       note.creditedHoldMs = playedMs;
     }
   }

@@ -27,6 +27,8 @@ let audio = localAudio, onlineAudio = null, audioMode = 'demo', musicStart = 0;
 let selectionId = 0, playId = 0, playPending = false;
 let chart = demoChart;
 let sourceType = 'demo';
+const DEFAULT_SONG = {title:'净善的遐歌',chartUrl:'./data/surasthana-legend.json',levels:[1,2,5,6],audio:{videoId:'2SvpviExw1o',startSeconds:2582,durationSeconds:141}};
+let currentSong = DEFAULT_SONG;
 let rate = 1;
 let scrollRate = 1;
 let offset = 0;
@@ -131,7 +133,7 @@ function updateMeta() {
   els.info.textContent = bpm;
   els.sideBpm.textContent = bpm;
   els.duration.textContent = format(chart.durationMs);
-  els.sourceTag.textContent = sourceType === 'demo' ? '示范谱' : sourceType === 'song' ? '传说 · 六星' : '本地谱';
+  els.sourceTag.textContent = sourceType === 'demo' ? '示范谱' : sourceType === 'song' ? '传说 · ' + (currentSong.levels?.[3] || '—') + ' 星' : '本地谱';
 }
 function songTime() { return Math.max(0, (audio.currentTime - (sourceType === 'song' ? musicStart : 0)) * 1000); }
 function seekSong(ms) { audio.currentTime = Math.max(0, ms) / 1000 + (sourceType === 'song' ? musicStart : 0); }
@@ -141,8 +143,11 @@ function setAudioMode(mode) {
   els.onlinePanel.hidden = mode !== 'online';
   els.songOptions.hidden = sourceType !== 'song';
   els.musicStart.disabled = mode === 'metronome';
-  els.musicStart.max = mode === 'online' ? '46' : '120';
+  const onlineDuration=currentSong?.audio?.durationSeconds;
+  const maxStart=mode === 'online' && Number.isFinite(onlineDuration) ? Math.max(0,Math.min(120,onlineDuration-chart.durationMs/1000)) : 120;
+  els.musicStart.max = String(maxStart);
   els.musicStart.value = String(musicStart);
+  els.onlineButton.disabled = !currentSong?.audio;
   els.onlineButton.classList.toggle('selected', mode === 'online');
   els.metronomeButton.classList.toggle('selected', mode === 'metronome');
   els.songAudioStatus.textContent = mode === 'online' ? '在线原声 · 同步待校准' : mode === 'metronome' ? '节拍伴奏 · 无歌曲原声' : '本地音频';
@@ -307,7 +312,7 @@ localAudio.addEventListener('error', () => {
 });
 localAudio.addEventListener('ended', () => { if (audio === localAudio && isPlaying) completePass(); });
 
-function makeDemoAudio(durationMs = 32000, bpm = 120, firstBeat = 0) {
+function makeDemoAudio(durationMs = 32000, bpm = 120, firstBeat = 0, beatTimesMs = null) {
   // Original synthesized percussion backing, unrelated to the player's inputs.
   const sampleRate = 22050, length = Math.ceil(durationMs / 1000 * sampleRate);
   const data = new Float32Array(length);
@@ -315,11 +320,12 @@ function makeDemoAudio(durationMs = 32000, bpm = 120, firstBeat = 0) {
     const start = Math.floor(time * sampleRate), count = Math.floor(duration * sampleRate);
     for (let i=0;i<count && start+i<length;i++) data[start+i] += fn(i/sampleRate);
   };
-  for (let beat=0; firstBeat + beat * 60 / bpm < durationMs / 1000; beat++) {
-    const t = firstBeat + beat * 60 / bpm;
+  const beats=Array.isArray(beatTimesMs) && beatTimesMs.length ? beatTimesMs.map(t=>t/1000) : Array.from({length:Math.max(0,Math.ceil((durationMs/1000-firstBeat)*bpm/60))},(_,i)=>firstBeat+i*60/bpm);
+  for (let beat=0; beat<beats.length; beat++) {
+    const t = beats[beat];
     const strong = beat % 4 === 0;
     add(t,0.12,(s) => Math.sin(2 * Math.PI * (strong ? 82 : 105) * s) * Math.exp(-s * 35) * (strong ? 0.35 : 0.16));
-    add(t + 30 / bpm,0.045,(s) => Math.sin(2 * Math.PI * 1700 * s) * Math.exp(-s * 90) * 0.035);
+    add(t + (beats[beat+1] ? (beats[beat+1]-t)/2 : 30/bpm),0.045,(s) => Math.sin(2 * Math.PI * 1700 * s) * Math.exp(-s * 90) * 0.035);
   }
   const bytes = new ArrayBuffer(44 + length * 2), view = new DataView(bytes);
   const text = (at,v) => { for (let i=0;i<v.length;i++) view.setUint8(at+i,v.charCodeAt(i)); };
@@ -338,38 +344,43 @@ function useDemo() {
   replaceAudio(makeDemoAudio(), 'demo');
   setMessage('已恢复原创示范谱与节拍伴奏。', true);
 }
-async function useSong() {
+async function useSong(song = DEFAULT_SONG) {
   const selection = ++selectionId;
   stopAudio();
-  setMessage('正在加载《净善的遐歌》传说谱面…', true, 0);
+  setMessage('正在加载《' + song.title + '》传说谱面…', true, 0);
   try {
-    const response = await fetch('./data/surasthana-legend.json');
+    const response = await fetch(song.chartUrl);
     if (!response.ok) throw new Error('谱面文件未能加载');
     const parsed = validateChart(await response.json());
     if (selection !== selectionId) return;
+    currentSong = song;
     chart = parsed; sourceType = 'song'; startMs = 0; endMs = chart.durationMs; musicStart = 0;
     audioReady = false;
     updateMeta(); refreshRangeUi(); resetSession();
-    await useOnline();
+    if (currentSong.audio) await useOnline(); else useMetronome();
   } catch (error) {
     if (selection === selectionId) setMessage('曲谱加载失败：' + (error instanceof Error ? error.message : '请重试'), false, 0);
   }
 }
 async function useOnline() {
-  if (sourceType !== 'song') return;
+  if (sourceType !== 'song' || !currentSong?.audio) return;
   stopAudio();
   musicStart = 0;
   audioReady = false;
-  if (onlineAudio?.failed) {
+  const {videoId,startSeconds}=currentSong.audio;
+  if (onlineAudio && (onlineAudio.failed || onlineAudio.videoId !== videoId || onlineAudio.trackStartSeconds !== startSeconds)) {
     onlineAudio.destroy();
     onlineAudio = null;
     const mount = $('youtubeMount');
     const player = document.createElement('div'); player.id = 'youtubePlayer';
     mount.replaceChildren(player);
   }
+  const label=$('onlineTrackLabel'), link=$('onlineLink');
+  if (label) label.textContent='官方原声专辑 · 《' + currentSong.title + '》';
+  if (link) link.href='https://www.youtube.com/watch?v=' + encodeURIComponent(videoId) + '&t=' + Math.floor(startSeconds) + 's';
   if (!onlineAudio) {
-    onlineAudio = new YouTubeAudio($('youtubePlayer'), (state, error) => {
-      if (audio !== onlineAudio || sourceType !== 'song') return;
+    const player = new YouTubeAudio($('youtubePlayer'), (state, error) => {
+      if (audio !== player || sourceType !== 'song') return;
       if (state === 2 && isPlaying) {
         pause(); setMessage('在线播放器已暂停，请使用上方按钮继续。');
       } else if (state === 0 && isPlaying) completePass();
@@ -377,27 +388,29 @@ async function useOnline() {
         if (isPlaying) pause();
         audioReady = false;
         setMessage(error?.message + '，可切换节拍伴奏或本地音频。', false, 0);
-      } else if (state === 1 && !isPlaying && !playPending) onlineAudio.pause();
-    });
+      } else if (state === 1 && !isPlaying && !playPending) player.pause();
+    }, {videoId,trackStartSeconds:startSeconds});
+    onlineAudio = player;
   }
-  audio = onlineAudio;
+  const activeOnline = onlineAudio;
+  audio = activeOnline;
   setAudioMode('online');
   resetSession();
   setMessage('正在准备官方在线音源，也可在设置中选择节拍伴奏。', true, 0);
   try {
-    await onlineAudio.ready;
-    if (audio !== onlineAudio || sourceType !== 'song') return;
+    await activeOnline.ready;
+    if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
     resetSession();
     setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
   } catch {
-    if (audio === onlineAudio && sourceType === 'song') setMessage('在线播放器加载失败，请检查网络或切换节拍伴奏 / 本地音频。', false, 0);
+    if (audio === activeOnline && sourceType === 'song') setMessage('在线播放器加载失败，请检查网络或切换节拍伴奏 / 本地音频。', false, 0);
   }
 }
 function useMetronome() {
   if (sourceType !== 'song') return;
-  replaceAudio(makeDemoAudio(chart.durationMs, chart.bpm, 60 / chart.bpm / 3), 'metronome');
-  setMessage('已切换为 168 BPM 节拍伴奏，可以直接练习；此伴奏不包含歌曲原声。', true, 0);
+  replaceAudio(makeDemoAudio(chart.durationMs, chart.bpm || 120, 60 / (chart.bpm || 120) / 3, chart.beatTimesMs), 'metronome');
+  setMessage('已切换为节拍伴奏，可以直接练习；此伴奏不包含歌曲原声。', true, 0);
 }
 async function importChart(file) {
   if (!file) return;
@@ -601,7 +614,7 @@ els.metronomeButton.addEventListener('click',useMetronome);
 els.musicStart.addEventListener('change',()=>{
   if (isPlaying) pause();
   const value = Number(els.musicStart.value);
-  musicStart = Number.isFinite(value) ? Math.max(0, Math.min(audioMode === 'online' ? 46 : 120, value)) : 0;
+  musicStart = Number.isFinite(value) ? Math.max(0, Math.min(Number(els.musicStart.max), value)) : 0;
   els.musicStart.value = String(musicStart);
   resetSession();
   setMessage('音源起点已调整为 ' + musicStart.toFixed(2) + ' 秒，谱面已回到片段起点。', true);
@@ -613,6 +626,7 @@ els.audioFile.addEventListener('change',()=>{
   els.audioFile.value='';
 });
 window.addEventListener('keydown',(event) => {
+  if ($('libraryView')?.hidden === false) return;
   if (bindingIndex !== -1) {
     event.preventDefault();
     if (event.code === 'Escape') { bindingIndex=-1; els.keyHelp.textContent='已取消修改'; renderKeys(); return; }
@@ -643,6 +657,8 @@ window.addEventListener('keydown',(event) => {
   }
   updateStats();
 });
+window.addEventListener('romm:library-open',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
+window.addEventListener('romm:select-song',event=>{ if (event.detail?.status === 'ready' && event.detail.chartUrl) void useSong(event.detail); });
 window.addEventListener('keyup',(event)=>{
   const lane=keys.indexOf(event.code);
   if (lane < 0) return;

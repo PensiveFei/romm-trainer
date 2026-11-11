@@ -24,7 +24,9 @@ function loadApi() {
 }
 
 export class YouTubeAudio {
-  constructor(element, onState = () => {}) {
+  constructor(element, onState = () => {}, options = {}) {
+    this.videoId = options.videoId || ALBUM_VIDEO;
+    this.trackStartSeconds = options.trackStartSeconds ?? TRACK_START_SECONDS;
     this.player = null;
     this.state = -1;
     this.rate = 1;
@@ -32,15 +34,18 @@ export class YouTubeAudio {
     this.pendingSeek = null;
     this.pendingPlay = null;
     this.failed = false;
+    this.destroyed = false;
     this.onState = onState;
     this.ready = loadApi().then(YT => new Promise((resolve, reject) => {
+      if (this.destroyed) { reject(new Error('播放器已关闭')); return; }
       const timeout = setTimeout(() => reject(new Error('在线播放器准备超时')), 20000);
       this.player = new YT.Player(element, {
-        width: '100%', height: '200', videoId: ALBUM_VIDEO,
-        playerVars: { start: TRACK_START_SECONDS, playsinline: 1, origin: location.origin },
+        width: '100%', height: '200', videoId: this.videoId,
+        playerVars: { start: this.trackStartSeconds, playsinline: 1, origin: location.origin },
         events: {
-          onReady: () => { clearTimeout(timeout); this.player.setPlaybackRate(this.rate); resolve(); },
+          onReady: () => { clearTimeout(timeout); if (this.destroyed || !this.player) { reject(new Error('播放器已关闭')); return; } this.player.setPlaybackRate(this.rate); resolve(); },
           onStateChange: event => {
+            if (this.destroyed) return;
             this.state = event.data;
             if (event.data === 1 && this.pendingPlay) {
               const pending = this.pendingPlay; this.pendingPlay = null;
@@ -49,6 +54,7 @@ export class YouTubeAudio {
             this.onState(event.data);
           },
           onError: event => {
+            if (this.destroyed) return;
             clearTimeout(timeout);
             this.failed = true;
             const error = new Error('在线音源不可用（播放器错误 ' + event.data + '）');
@@ -67,7 +73,7 @@ export class YouTubeAudio {
   get currentTime() {
     const value = this.player?.getCurrentTime?.();
     if (!Number.isFinite(value)) return this.lastTime;
-    const time = Math.max(0, value - TRACK_START_SECONDS);
+    const time = Math.max(0, value - this.trackStartSeconds);
     // During an asynchronous seek keep the clock at its target until the
     // player reports the new position, rather than judging the old position.
     if (this.pendingSeek) {
@@ -82,7 +88,7 @@ export class YouTubeAudio {
   set currentTime(value) {
     this.lastTime = Math.max(0, value);
     this.pendingSeek = { time: this.lastTime, at: Date.now() };
-    this.player?.seekTo(TRACK_START_SECONDS + this.lastTime, true);
+    this.player?.seekTo(this.trackStartSeconds + this.lastTime, true);
   }
   get paused() { return this.state !== 1; }
   set playbackRate(value) { this.rate = value; this.player?.setPlaybackRate?.(value); }
@@ -107,5 +113,5 @@ export class YouTubeAudio {
     }
     this.player?.pauseVideo?.();
   }
-  destroy() { this.pause(); this.player?.destroy?.(); this.player = null; }
+  destroy() { this.destroyed = true; this.pause(); this.player?.destroy?.(); this.player = null; }
 }
