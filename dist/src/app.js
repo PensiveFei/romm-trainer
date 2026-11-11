@@ -13,7 +13,8 @@ const els = {
   performanceScore: $('performanceScore'), completionValue: $('completionValue'), completionFill: $('completionFill'), completionTrack: $('completionTrack'),
   combo: $('statCombo'), timing: $('statTiming'), miss: $('statMiss'), title: $('trackTitle'), artist: $('trackArtist'),
   info: $('trackInfo'), sideTitle: $('sideTitle'), sideArtist: $('sideArtist'), sideBpm: $('sideBpm'),
-  sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect')
+  sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect'),
+  drawer: $('toolsDrawer'), drawerToggle: $('toolsToggle'), drawerClose: $('toolsClose')
 };
 const audio = new Audio();
 audio.preload = 'metadata';
@@ -56,6 +57,16 @@ function applyTheme(id, save = true) {
   els.theme.value = themeId;
   hitEffects.length = 0;
   if (save) { try { localStorage.setItem('romm-trainer-theme', themeId); } catch {} }
+}
+function setDrawerOpen(open) {
+  if (open && isPlaying) pause();
+  if (!open && bindingIndex !== -1) {
+    bindingIndex = -1;
+    els.keyHelp.textContent = '已取消修改';
+    renderKeys();
+  }
+  els.drawer.hidden = !open;
+  els.drawerToggle.setAttribute('aria-expanded', String(open));
 }
 function format(ms, tenths = false) {
   const safe = Math.max(0, Number.isFinite(ms) ? ms : 0);
@@ -171,6 +182,7 @@ function resetSession() {
 async function play() {
   if (!checkRange(true)) return;
   if (!audioReady) { setMessage('请先选择与当前谱面配套的本地音频。', false, 0); return; }
+  setDrawerOpen(false);
   if (!hasStarted) {
     session = new Judge(chart,startMs,endMs,rate,offset);
     audio.currentTime = Math.max(0,startMs - 2000) / 1000;
@@ -321,22 +333,25 @@ function renderStage(songMs) {
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
-  const left = w * 0.10, usable = w * 0.80, laneWidth = usable / 6, hitY = h - 96;
+  const usable = Math.min(w * .78, 1050), left = (w - usable) / 2, laneWidth = usable / 6, hitY = h - 120;
+  const spawnY = Math.min(142,hitY - 160);
   const travel = 2200 / scrollRate;
-  const pxPerMs = (hitY - 65) / travel;
+  const pxPerMs = (hitY - spawnY) / travel;
   const showTime = songMs - offset * rate;
   const center = lane => left + lane * laneWidth + laneWidth / 2;
-  const radius = Math.min(21,laneWidth * .26);
+  const radius = Math.min(23,laneWidth * .25);
   paintBackdrop(ctx,currentTheme,w,h);
+  // Keep entering notes below the toolbar while leaving the HUD unobstructed.
+  ctx.save(); ctx.beginPath(); ctx.rect(0,72,w,Math.max(0,h-72)); ctx.clip();
 
   for (let lane=0;lane<6;lane++) {
     const x = center(lane);
-    const beam = ctx.createLinearGradient(0,75,0,hitY);
+    const beam = ctx.createLinearGradient(0,spawnY,0,hitY);
     beam.addColorStop(0,'rgba(233,241,237,0)');
     beam.addColorStop(.35, held.has(lane) ? rgba(currentTheme.accent,.30) : 'rgba(232,240,237,.14)');
     beam.addColorStop(1, held.has(lane) ? rgba(currentTheme.accent,.85) : 'rgba(232,240,237,.48)');
     ctx.strokeStyle=beam; ctx.lineWidth=held.has(lane)?2:1;
-    ctx.beginPath(); ctx.moveTo(x,75); ctx.lineTo(x,hitY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,spawnY); ctx.lineTo(x,hitY); ctx.stroke();
   }
 
   // Draw links behind notes that must be pressed simultaneously.
@@ -404,6 +419,7 @@ function renderStage(songMs) {
     ctx.fillStyle='#2b3340';ctx.font='700 12px "Microsoft YaHei",sans-serif';
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(keyLabel(keys[lane]),x,hitY+39);
   }
+  ctx.restore();
 }
 function frame() {
   let now = isPlaying ? audio.currentTime*1000 : previewMs;
@@ -417,6 +433,8 @@ function frame() {
 }
 
 els.theme.addEventListener('change',() => { applyTheme(els.theme.value); els.theme.blur(); });
+els.drawerToggle.addEventListener('click',() => setDrawerOpen(els.drawer.hidden));
+els.drawerClose.addEventListener('click',() => { setDrawerOpen(false); els.drawerToggle.focus(); });
 els.play.addEventListener('click',togglePlay);
 els.restart.addEventListener('click',() => { resetSession(); setMessage('已回到片段起点。',true); });
 els.start.addEventListener('input',handleRange);
@@ -459,6 +477,7 @@ window.addEventListener('keydown',(event) => {
     try { localStorage.setItem('romm-trainer-keys',JSON.stringify(keys)); } catch {}
     renderKeys(); return;
   }
+  if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }
   if (event.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName)) return;
   if (event.code === 'Space') { event.preventDefault(); if (!event.repeat) togglePlay(); return; }
   const lane=keys.indexOf(event.code);

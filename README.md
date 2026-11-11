@@ -60,9 +60,9 @@ npm start
 npm test
 ```
 
-默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。
+默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。点击右上角「曲谱与设置」可导入文件、调整练习区间和键位。
 
-Default keys: A, S, D, J, K, L. Press Space to pause or resume.
+Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
 
 ## 演奏完成度 | Performance Completion
 

@@ -24,9 +24,9 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
-    'performanceScore','completionValue','completionFill','completionTrack'];
+    'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
-  el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true;
+  el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
   const listeners={};
   globalThis.HTMLElement=FakeElement;
   globalThis.window={ devicePixelRatio:1, addEventListener(name,fn){ (listeners[name] ||= []).push(fn); } };
@@ -51,6 +51,12 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   const press=(name,code)=>listeners[name].forEach(fn=>fn({code,repeat:false,target:document.body,preventDefault(){}}));
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
 
+  el.toolsToggle.dispatch('click');
+  assert.equal(el.toolsDrawer.hidden,false);
+  press('keydown','Escape');
+  assert.equal(el.toolsDrawer.hidden,true);
+  el.toolsToggle.dispatch('click'); el.toolsClose.dispatch('click');
+  assert.equal(el.toolsDrawer.hidden,true);
   el.playButton.dispatch('click'); await flush();
   assert.equal(el.playText.textContent,'暂停');
   testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
@@ -72,12 +78,14 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   const missesBefore=Number(el.statMiss.textContent);
   const scoreAtHoldStart=Number(el.performanceScore.textContent);
   testAudio.currentTime=10.5;
-  el.playButton.dispatch('click');
+  el.toolsToggle.dispatch('click');
+  assert.equal(el.toolsDrawer.hidden,false);
   assert.ok(Number(el.performanceScore.textContent)>scoreAtHoldStart);
   assert.equal(el.playText.textContent,'继续练习');
   const missesAtPause=Number(el.statMiss.textContent);
   assert.ok(missesAtPause>=missesBefore);
   el.playButton.dispatch('click'); await flush();
+  assert.equal(el.toolsDrawer.hidden,true);
   testAudio.currentTime=11; press('keyup','KeyA');
   assert.equal(Number(el.statMiss.textContent),missesAtPause);
   assert.equal(el.statHits.children[0].textContent.trim(),'2');
