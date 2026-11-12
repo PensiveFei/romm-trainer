@@ -20,6 +20,8 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     querySelectorAll() { return []; }
     getContext() { return {}; }
     getBoundingClientRect() { return {width:0,height:0}; }
+    showModal() { this.open=true; }
+    close() { this.open=false; }
   }
   const ids=['stage','stageWrap','stageHint','practiceCountdown','feedback','message','playButton','playText','playIcon','restartButton',
     'startRange','endRange','startOutput','endOutput','loopToggle','scrollSpeed','scrollLabel','offset','speedLabel',
@@ -29,10 +31,13 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
     'hitWindow','hitWindowLabel','songButton','songOptions','onlinePanel','songAudioStatus','musicStart',
     'onlineButton','metronomeButton','youtubePlayer','youtubeMount','timelineSeek',
-    'touchLane0','touchLane1','touchLane2','touchLane3','touchLane4','touchLane5','homeView','libraryView'];
+    'touchLane0','touchLane1','touchLane2','touchLane3','touchLane4','touchLane5','homeView','libraryView',
+    'seekBack10','seekForward10','quickRangeToggle','quickRangeMenu','markRangeA','markRangeB','clearRange',
+    'audioModeBadge','hitVolume','hitVolumeLabel','resultOpen','practiceResult','resultClose','resultDone','resultSong',
+    'resultProfile','resultCompletion','resultHits','resultMisses','resultTiming','resultCombo','resultBest','resultStorage'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
-  el.homeView.hidden=false; el.libraryView.hidden=true;
+  el.homeView.hidden=false; el.libraryView.hidden=true; el.quickRangeMenu.hidden=true; el.resultOpen.hidden=true;
   const listeners={};
   const documentListeners={};
   globalThis.HTMLElement=FakeElement;
@@ -75,6 +80,14 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   const press=(name,code)=>listeners[name].forEach(fn=>fn({code,repeat:false,target:document.body,preventDefault(){}}));
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
   const begin=async()=>{ el.playButton.dispatch('click'); await flush(); t.mock.timers.tick(1000); t.mock.timers.tick(1000); t.mock.timers.tick(1000); await flush(); };
+
+  assert.equal(el.audioModeBadge.textContent,'示范节拍');
+  el.seekForward10.dispatch('click');assert.equal(testAudio.currentTime,10);
+  el.quickRangeToggle.dispatch('click');assert.equal(el.quickRangeMenu.hidden,false);
+  el.markRangeA.dispatch('click');assert.equal(el.startRange.value,'10');assert.equal(testAudio.currentTime,8);
+  el.seekForward10.dispatch('click');el.markRangeB.dispatch('click');assert.equal(el.endRange.value,'18');
+  el.clearRange.dispatch('click');assert.equal(el.startRange.value,'0');assert.equal(el.endRange.value,'32');
+  el.markRangeB.dispatch('click');assert.equal(el.endRange.value,'32','invalid markers leave the range unchanged');
 
   el.toolsToggle.dispatch('click');
   assert.equal(el.toolsDrawer.hidden,false);
@@ -151,6 +164,9 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   assert.equal(el.completionValue.textContent,'(0.0%)');
   assert.match(el.message.textContent,/上一轮：完成度 [\d.]+%/);
   assert.equal(el.playText.textContent,'暂停');
+  assert.equal(el.resultOpen.hidden,false);
+  assert.notEqual(el.practiceResult.open,true,'looping must not interrupt the next round');
+  assert.match(el.resultProfile.textContent,/00:00.0 – 00:12.0/);
 
   el.toolsToggle.dispatch('click');
   el.hitWindow.value='220'; el.hitWindow.dispatch('input');
@@ -240,7 +256,17 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   el.metronomeButton.dispatch('click');
   assert.equal(el.onlinePanel.hidden,true);
   assert.match(el.songAudioStatus.textContent,/节拍伴奏/);
+  assert.equal(el.audioModeBadge.textContent,'节拍伴奏 · 无原曲');
   await begin();
   assert.equal(el.playText.textContent,'暂停');
   assert.equal(testAudio.paused,false);
+  el.loopToggle.checked=false;el.loopToggle.dispatch('change');
+  await begin();testAudio.currentTime=6;nextFrame();
+  assert.equal(el.practiceResult.open,true,'a non-looping completed practice shows its result');
+  assert.match(el.resultProfile.textContent,/00:00.0 – 00:06.0/);
+  assert.match(el.resultStorage.textContent,/当前浏览器/);
+  el.resultDone.dispatch('click');assert.equal(el.practiceResult.open,false);
+  el.timelineSeek.value='6000';el.timelineSeek.dispatch('change');
+  await begin();nextFrame();
+  assert.notEqual(el.practiceResult.open,true,'seeking to the end must not reopen an old result');
 });

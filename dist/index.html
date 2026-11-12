@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./src/styles.css">
   <link rel="stylesheet" href="./src/library.css">
   <link rel="stylesheet" href="./src/home.css">
+  <link rel="stylesheet" href="./src/practice-extras.css">
 </head>
 <body>
   <div class="app-viewport">
@@ -20,13 +21,16 @@
       </div>
       <div class="top-transport">
         <button class="play-button" id="playButton" type="button"><span class="play-icon" id="playIcon">▶</span><span id="playText">开始练习</span></button>
+        <button class="quick-seek" id="seekBack10" type="button" aria-label="后退 10 秒" title="后退 10 秒">−10</button>
         <div class="timeline">
           <div class="timeline-labels"><span id="elapsed">00:00</span><span id="duration">00:32</span></div>
           <div class="progress-track"><div id="progressFill"></div><input id="timelineSeek" type="range" min="0" max="32000" step="100" value="0" aria-label="播放进度" aria-valuetext="00:00" title="拖动调整进度；左右方向键快退或快进 10 秒"></div>
         </div>
+        <button class="quick-seek" id="seekForward10" type="button" aria-label="前进 10 秒" title="前进 10 秒">+10</button>
+        <div class="quick-range-wrap"><button class="quick-range-toggle" id="quickRangeToggle" type="button" aria-label="设置练习区间" aria-controls="quickRangeMenu" aria-expanded="false">A/B</button><div class="quick-range-menu" id="quickRangeMenu" hidden><button id="markRangeA" type="button">当前位置设为 A</button><button id="markRangeB" type="button">当前位置设为 B</button><button id="clearRange" type="button">恢复全曲</button></div></div>
         <button class="reset-button" id="restartButton" type="button" title="回到片段起点"><span aria-hidden="true">↻</span> 重新开始</button>
       </div>
-      <div class="header-actions"><button class="library-open" id="homeOpen" type="button" aria-label="首页">⌂ <span>首页</span></button><button class="library-open" id="libraryOpen" type="button" aria-label="全部曲目" aria-controls="libraryView">♫ <span>全部曲目</span></button><button class="tools-toggle" id="toolsToggle" type="button" aria-controls="toolsDrawer" aria-expanded="false" aria-label="曲谱与练习设置"><span class="tools-orb" aria-hidden="true">✦</span><span class="tools-label">曲谱与设置</span></button></div>
+      <div class="header-actions"><button class="library-open" id="homeOpen" type="button" aria-label="首页">⌂ <span>首页</span></button><button class="library-open" id="libraryOpen" type="button" aria-label="全部曲目" aria-controls="libraryView">♫ <span>全部曲目</span></button><button class="library-open result-open" id="resultOpen" type="button" aria-label="查看上一轮成绩" hidden>◈ <span>成绩</span></button><button class="tools-toggle" id="toolsToggle" type="button" aria-controls="toolsDrawer" aria-expanded="false" aria-label="曲谱与练习设置"><span class="tools-orb" aria-hidden="true">✦</span><span class="tools-label">曲谱与设置</span></button></div>
     </header>
 
     <div class="app-shell">
@@ -62,7 +66,7 @@
                 <strong><span id="performanceScore">0</span> <em id="completionValue">(0.0%)</em></strong>
               </div>
               <div class="combo-display"><strong id="statCombo">0</strong><span>连击</span></div>
-              <div class="stage-status"><span class="stage-mode">垂直模式</span><span id="stageTime">00:00 / 00:32</span></div>
+              <div class="stage-status"><span class="stage-mode">垂直模式</span><span id="stageTime">00:00 / 00:32</span><span id="audioModeBadge" class="audio-mode-badge" role="status" aria-live="polite">示范节拍</span></div>
             </div>
             <div id="stageHint" class="stage-hint"><span class="hint-diamond">✦</span><strong>准备演奏</strong><span>点击上方播放键开始练习</span></div>
             <div id="practiceCountdown" class="practice-countdown" role="status" aria-live="polite" hidden></div>
@@ -141,13 +145,14 @@
         <div class="language-setting"><label for="languageSelect">语言 / Language</label><select id="languageSelect" aria-label="语言 / Language"><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option></select></div>
         <section class="panel section-panel">
           <div class="panel-title"><h3>片段练习</h3><span>01</span></div>
-          <div class="range-block"><div class="range-label"><span><b class="range-point">A</b> 起点</span><output id="startOutput">00:00.0</output></div><input id="startRange" type="range" min="0" max="31" value="0" step="0.5" aria-label="练习起点"></div>
-          <div class="range-block"><div class="range-label"><span><b class="range-point">B</b> 终点</span><output id="endOutput">00:32.0</output></div><input id="endRange" type="range" min="1" max="32" value="32" step="0.5" aria-label="练习终点"></div>
-          <div class="loop-row"><div><strong>区间循环</strong><small>重复练习选定的片段</small></div><label class="switch"><input id="loopToggle" type="checkbox" checked><span></span><span class="sr-only">循环练习</span></label></div>
+          <div class="range-block"><div class="range-label"><span><b class="range-point">A</b> 起点</span><output id="startOutput">00:00.0</output></div><input id="startRange" type="range" min="0" max="31" value="0" step="0.1" aria-label="练习起点"></div>
+          <div class="range-block"><div class="range-label"><span><b class="range-point">B</b> 终点</span><output id="endOutput">00:32.0</output></div><input id="endRange" type="range" min="0" max="32" value="32" step="0.1" aria-label="练习终点"></div>
+          <div class="loop-row"><div><strong>区间循环</strong><small>重复练习选定的片段</small></div><label class="switch"><input id="loopToggle" type="checkbox"><span></span><span class="sr-only">循环练习</span></label></div>
         </section>
         <section class="panel settings-panel">
           <div class="panel-title"><h3>演奏设置</h3><span>02</span></div>
           <div class="settings-row"><div class="setting-label"><span>播放速度</span><strong id="speedLabel">1.00×</strong></div><div class="segments" id="rateButtons"><button type="button" data-rate="0.5">0.5×</button><button type="button" data-rate="0.75">0.75×</button><button type="button" data-rate="1" class="selected">1.0×</button></div></div>
+          <div class="settings-row"><div class="setting-label"><span>按键音量</span><strong id="hitVolumeLabel">30%</strong></div><input id="hitVolume" type="range" min="0" max="100" step="5" value="30" aria-label="按键音量"></div>
           <div class="settings-row"><div class="setting-label scroll-label"><span>音符流速</span><strong id="scrollLabel">1.0×</strong></div><input id="scrollSpeed" type="range" min="0.3" max="2" step="0.1" value="1" aria-label="音符下落速度"></div>
           <div class="settings-row"><div class="setting-label hit-window-label"><span>判定范围</span><strong id="hitWindowLabel">±180 ms</strong></div><input id="hitWindow" type="range" min="120" max="240" step="10" value="180" aria-label="判定范围（毫秒）" aria-describedby="hitWindowHelp"></div>
           <p class="setting-help" id="hitWindowHelp">前后容许时间，调大更宽松</p>
@@ -163,6 +168,7 @@
       </div>
     </div>
   </div>
+  <dialog id="practiceResult" class="practice-result" aria-labelledby="practiceResultTitle"><div class="result-head"><h2 id="practiceResultTitle">练习结果</h2><button id="resultClose" type="button" aria-label="关闭成绩">×</button></div><div class="result-body"><p id="resultSong" class="result-song"></p><p id="resultProfile" class="result-profile"></p><div class="result-completion"><span>演奏完成度</span><strong id="resultCompletion">0.0%</strong></div><div class="result-stats"><div><span>命中</span><strong id="resultHits">0</strong></div><div><span>漏击</span><strong id="resultMisses">0</strong></div><div><span>偏早 / 偏晚</span><strong id="resultTiming">0 / 0</strong></div><div><span>最高连击</span><strong id="resultCombo">0</strong></div></div><p id="resultBest" class="result-best"></p><p id="resultStorage" class="result-storage"></p><button id="resultDone" class="result-done" type="button">返回练习</button></div></dialog>
   <main id="homeView" class="home-view" aria-label="千音习谱首页">
     <header class="home-header">
       <div class="home-brand"><span class="home-emblem" aria-hidden="true">♫</span><div><strong>千音习谱</strong><small>练习模式</small></div></div>
@@ -186,7 +192,7 @@
       <div class="library-header-side"><span class="library-edition">♫ &nbsp;曲目典藏</span><button id="libraryClose" class="library-close" type="button" aria-label="返回练习">↶</button></div>
     </header>
     <main class="library-content">
-      <div class="library-collection"><div class="library-list-head"><div><span class="library-eyebrow">THE MUSIC COLLECTION</span><h1>曲目典藏 <i>✦</i></h1></div><span id="libraryCount" class="library-count">正在整理曲目…</span></div><div id="libraryGroups" class="library-groups" aria-label="曲目分类" tabindex="0"><p class="library-loading">正在打开曲目典藏…</p></div></div>
+      <div class="library-collection"><div class="library-list-head"><div><span class="library-eyebrow">THE MUSIC COLLECTION</span><h1>曲目典藏 <i>✦</i></h1></div><div class="library-list-controls"><span id="libraryCount" class="library-count">正在整理曲目…</span><label class="library-filter"><span class="sr-only">谱面状态</span><select id="libraryStatusFilter" aria-label="谱面状态"><option value="all">全部状态</option><option value="ready">可练习</option><option value="review">谱面待核对</option><option value="missing">暂缺谱面</option></select></label></div></div><div id="libraryGroups" class="library-groups" aria-label="曲目分类" tabindex="0"><p class="library-loading">正在打开曲目典藏…</p></div></div>
       <aside id="libraryDetail" class="library-detail" aria-live="polite"><div class="library-empty">选择一首曲目<br><small>查看谱面与练习信息</small></div></aside>
     </main>
     <footer class="library-footer"><div class="library-search"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="搜索歌曲名称" aria-label="搜索歌曲名称"></div><div class="library-footer-note">✦ &nbsp;手动练习 · 谱面与音源同步持续校准</div><span id="favoriteFeedback" class="sr-only" role="status" aria-live="polite"></span><button id="libraryFavorite" class="library-favorite" type="button" aria-label="收藏所选曲目" aria-pressed="false" disabled>★</button><button id="libraryStart" class="library-start" type="button" disabled><span class="start-disc">▶</span><span>前往练习</span><span class="start-spark">✦</span></button></footer>

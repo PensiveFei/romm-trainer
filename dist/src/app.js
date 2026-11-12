@@ -6,6 +6,8 @@ import { localAudioStore } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
 import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
 import { initLanguage, translate, tr, songName } from './i18n.js';
+import { chartIdentity, practiceResults, resultPercent, resultTime } from './practice-results.js';
+import { hitSound } from './hit-sound.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -23,7 +25,12 @@ const els = {
   drawer: $('toolsDrawer'), drawerToggle: $('toolsToggle'), drawerClose: $('toolsClose'),
   songOptions: $('songOptions'), onlinePanel: $('onlinePanel'), songAudioStatus: $('songAudioStatus'),
   musicStart: $('musicStart'), onlineButton: $('onlineButton'), metronomeButton: $('metronomeButton'),
-  rememberAudio: $('rememberAudio'), savedAudioStatus: $('savedAudioStatus'), forgetAudio: $('forgetAudio')
+  rememberAudio: $('rememberAudio'), savedAudioStatus: $('savedAudioStatus'), forgetAudio: $('forgetAudio'),
+  audioBadge: $('audioModeBadge'), hitVolume: $('hitVolume'), hitVolumeLabel: $('hitVolumeLabel'),
+  resultOpen: $('resultOpen'), resultDialog: $('practiceResult'), resultClose: $('resultClose'), resultDone: $('resultDone'),
+  resultSong: $('resultSong'), resultProfile: $('resultProfile'), resultCompletion: $('resultCompletion'),
+  resultHits: $('resultHits'), resultMisses: $('resultMisses'), resultTiming: $('resultTiming'), resultCombo: $('resultCombo'),
+  resultBest: $('resultBest'), resultStorage: $('resultStorage'), quickMenu: $('quickRangeMenu'), quickToggle: $('quickRangeToggle')
 };
 const localAudio = new Audio();
 localAudio.preload = 'metadata';
@@ -42,10 +49,11 @@ let offset = 0;
 let hitWindowMs = DEFAULT_HIT_WINDOW_MS;
 let startMs = 0, endMs = chart.durationMs;
 let session;
-let audioReady = false, isPlaying = false, hasStarted = false, ending = false, audioUrl = null;
+let audioReady = false, audioFailed = false, isPlaying = false, hasStarted = false, ending = false, audioUrl = null;
 let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
 let lastMessage = '', lastMessageEn = null, lastMessageJa = null, lastFeedback = '', lastPlayText = '开始练习', lastKeyHelp = '点击键位，再按下新的按键', lastSavedAudioStatus = '音频仅保存在当前浏览器，不会上传。';
 let seeking = false;
+let currentIdentity=chartIdentity(sourceType,currentSong,chart), lastResult=null;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
 const held = new Set();
 const activeInputs = new Map();
@@ -85,6 +93,7 @@ els.hitWindowLabel.textContent = '±' + hitWindowMs + ' ms';
 els.scroll.value = scrollRate;
 els.scrollLabel.textContent = scrollRate.toFixed(1) + '×';
 els.offset.value = offset;
+if (els.hitVolume) { els.hitVolume.value=String(hitSound.getVolume()); if (els.hitVolumeLabel) els.hitVolumeLabel.textContent=hitSound.getVolume()+'%'; }
 
 function applyTheme(id, save = true) {
   themeId = Object.hasOwn(THEMES, id) ? id : 'base';
@@ -96,6 +105,7 @@ function applyTheme(id, save = true) {
 }
 function setDrawerOpen(open) {
   const wasOpen = !els.drawer.hidden;
+  if (open) setQuickMenu(false);
   if (open && isPlaying) pause();
   if (open && playPending) stopAudio();
   if (!open && bindingIndex !== -1) {
@@ -117,6 +127,74 @@ function formatCompletion(value) {
   const bounded = Math.max(0, Math.min(100, value));
   return (bounded >= 100 - 1e-8 ? 100 : Math.floor((bounded + 1e-9) * 10) / 10).toFixed(1);
 }
+function setQuickMenu(open) {
+  if (!els.quickMenu || !els.quickToggle) return;
+  els.quickMenu.hidden=!open;
+  els.quickToggle.setAttribute('aria-expanded',String(open));
+}
+function setRangeAtCurrent(which) {
+  if (!audioReady) { setMessage('音源尚未就绪，暂时无法调整进度。'); return; }
+  const current=Math.min(chart.durationMs,Math.max(0,Math.round((isPlaying ? songTime() : previewMs)/100)*100));
+  const nextStart=which==='A'?current:startMs, nextEnd=which==='B'?current:endMs;
+  const error=validateRange(chart,nextStart,nextEnd);
+  if (error) { setMessage(error,false,0); return; }
+  startMs=nextStart;endMs=nextEnd;refreshRangeUi();resetSession();
+  setMessage('已将 '+format(current,true)+' 设为 '+which+' 点，练习已回到区间前的引导位置。',true,5000,
+    `Set ${which} to ${format(current,true)}. Returned to the section lead-in.`,
+    `${format(current,true)} を ${which} 点に設定し、区間の導入位置に戻りました。`);
+  setQuickMenu(false);
+}
+function resetRange() {
+  startMs=0;endMs=chart.durationMs;refreshRangeUi();resetSession();setQuickMenu(false);
+  setMessage('已恢复全曲练习。',true,5000,'Restored the full song.','練習範囲を全曲に戻しました。');
+}
+function clearResult() {
+  lastResult=null;
+  if (els.resultOpen) els.resultOpen.hidden=true;
+  if (els.resultDialog?.open) els.resultDialog.close();
+}
+function renderResult() {
+  if (!lastResult || !els.resultSong) return;
+  const {attempt,best,improved,saved}=lastResult;
+  els.resultSong.textContent=sourceType==='song'?songName(currentSong):sourceType==='demo'?translate(chart.title):chart.title;
+  const range=`${resultTime(attempt.startMs)} – ${resultTime(attempt.endMs)}`;
+  const signedOffset=(attempt.offsetMs>=0?'+':'')+attempt.offsetMs+' ms';
+  els.resultProfile.textContent=tr(`区间 ${range} · ${attempt.rate.toFixed(2)}× · 判定 ±${attempt.hitWindowMs} ms · 偏移 ${signedOffset}`,
+    `Section ${range} · ${attempt.rate.toFixed(2)}× · Window ±${attempt.hitWindowMs} ms · Offset ${signedOffset}`,
+    `区間 ${range} · ${attempt.rate.toFixed(2)}× · 判定 ±${attempt.hitWindowMs} ms · 調整 ${signedOffset}`);
+  els.resultCompletion.textContent=resultPercent(attempt)+'%';
+  els.resultHits.textContent=attempt.hits+' / '+attempt.total;
+  els.resultMisses.textContent=String(attempt.misses);
+  els.resultTiming.textContent=attempt.early+' / '+attempt.late;
+  els.resultCombo.textContent=String(attempt.maxCombo);
+  els.resultBest.textContent=improved ? tr(`相同设置的最佳：${resultPercent(best)}% · 新纪录`,`Best with these settings: ${resultPercent(best)}% · New record`,`同じ設定のベスト：${resultPercent(best)}% · 新記録`) :
+    tr(`相同设置的最佳：${resultPercent(best)}%`,`Best with these settings: ${resultPercent(best)}%`,`同じ設定のベスト：${resultPercent(best)}%`);
+  els.resultStorage.textContent=saved ? tr('成绩保存在当前浏览器。','Results are saved in this browser.','結果はこのブラウザに保存されます。') :
+    tr('当前浏览器无法保存，成绩仅在本次访问有效。','Unable to save; this result lasts only for this visit.','保存できないため、今回のアクセス中のみ有効です。');
+}
+function rememberResult() {
+  if (!session.states.length || session.maxScore<=0) return false;
+  const attempt={...currentIdentity,startMs:session.startMs,endMs:session.endMs,rate:session.rate,hitWindowMs:session.hitWindowMs,offsetMs:session.offsetMs,
+    score:session.score,maxScore:session.maxScore,hits:session.hits,misses:session.misses,early:session.early,late:session.late,maxCombo:session.maxCombo,total:session.states.length};
+  const stored=practiceResults.record(attempt);
+  if (!stored) return false;
+  lastResult={attempt,...stored};
+  if (els.resultOpen) els.resultOpen.hidden=false;
+  renderResult();
+  window.dispatchEvent?.(new Event('romm:results-changed'));
+  return true;
+}
+function showResult() {
+  if (!lastResult || !els.resultDialog?.showModal) return;
+  if (isPlaying) pause();
+  if (playPending) stopAudio();
+  setQuickMenu(false);renderResult();
+  if (!els.resultDialog.open) els.resultDialog.showModal();
+}
+function closeResult() {
+  if (els.resultDialog?.open) els.resultDialog.close();
+  els.resultOpen?.focus();
+}
 function setMessage(text, good = false, timeout = 5000, english = null, japanese = null) {
   clearTimeout(messageTimer);
   lastMessage = text; lastMessageEn = english; lastMessageJa = japanese;
@@ -132,7 +210,7 @@ function flash(text, kind = 'hit') {
   els.feedback.classList.add('visible');
   feedbackTimer = setTimeout(() => els.feedback.classList.remove('visible'), 550);
 }
-function setPlayText(text) { lastPlayText=text; els.playText.textContent=translate(text); }
+function setPlayText(text) { lastPlayText=text; els.playText.textContent=translate(text); els.play.setAttribute('aria-label',translate(text)); }
 function setKeyHelp(text) { lastKeyHelp=text; els.keyHelp.textContent=translate(text); }
 function setSavedAudioStatus(text) { lastSavedAudioStatus=text; if (els.savedAudioStatus) els.savedAudioStatus.textContent=translate(text); }
 function keyLabel(code) { return code.replace(/^Key/,'').replace(/^Digit/,''); }
@@ -169,8 +247,18 @@ function updateMeta() {
 }
 function songTime() { return Math.max(0, (audio.currentTime - (sourceType === 'song' ? musicStart : 0)) * 1000); }
 function seekSong(ms) { audio.currentTime = Math.max(0, ms) / 1000 + (sourceType === 'song' ? musicStart : 0); }
+function updateAudioBadge() {
+  if (!els.audioBadge) return;
+  const text=audioMode==='demo' ? '示范节拍' : audioMode==='metronome' ? '节拍伴奏 · 无原曲' :
+    audioMode==='online' ? (audioReady ? '在线音源' : '在线原声 · 加载中') :
+    audioFailed ? '本地音频不可用' : audioReady ? '本地音频' : '本地音频 · 加载中';
+  els.audioBadge.textContent=translate(text);
+  els.audioBadge.dataset.mode=audioMode;
+  els.audioBadge.setAttribute('aria-label',tr('当前音源：','Audio: ','現在の音源：')+translate(text));
+}
 function setAudioMode(mode) {
   audioMode = mode;
+  audioFailed = false;
   els.wrap.classList.toggle('with-player', mode === 'online');
   els.onlinePanel.hidden = mode !== 'online';
   els.songOptions.hidden = sourceType !== 'song';
@@ -183,6 +271,7 @@ function setAudioMode(mode) {
   els.onlineButton.classList.toggle('selected', mode === 'online');
   els.metronomeButton.classList.toggle('selected', mode === 'metronome');
   els.songAudioStatus.textContent = translate(mode === 'online' ? '在线原声 · 同步待校准' : mode === 'metronome' ? '节拍伴奏 · 无歌曲原声' : '本地音频');
+  updateAudioBadge();
 }
 function updateStats() {
   const completion = formatCompletion(session.completion);
@@ -352,7 +441,7 @@ async function play() {
     }
   }
 }
-function togglePlay() { if (playPending) stopAudio(); else if (isPlaying) pause(); else void play(); }
+function togglePlay() { if (playPending) stopAudio(); else if (isPlaying) pause(); else { hitSound.unlock(); void play(); } }
 function completePass() {
   if (ending) return;
   ending = true;
@@ -361,6 +450,7 @@ function completePass() {
   releaseHeldAt(endMs + nudge);
   session.finishRemaining();
   updateStats();
+  const hasResult=rememberResult();
   if (els.loop.checked && isPlaying) {
     const hitCount = session.hits, total = session.states.length, completion = formatCompletion(session.completion);
     session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
@@ -374,6 +464,7 @@ function completePass() {
     previewMs = endMs;
     setPlayText('再练一次'); els.playIcon.textContent = '▶';
     setMessage('本段练习完成：完成度 ' + formatCompletion(session.completion) + '%，命中 ' + session.hits + ' / ' + session.states.length + '。', true, 0);
+    if (hasResult) showResult();
   }
 }
 function handleRange() {
@@ -399,8 +490,8 @@ function replaceAudio(url, mode = 'local') {
   stopAudio();
   audio = localAudio;
   musicStart = 0;
-  setAudioMode(mode);
   audioReady = false;
+  setAudioMode(mode);
   if (audioUrl) URL.revokeObjectURL(audioUrl);
   audioUrl = url;
   audio.src = url;
@@ -411,16 +502,19 @@ localAudio.addEventListener('loadedmetadata', () => {
   if (audio !== localAudio) return;
   if (!Number.isFinite(audio.duration) || audio.duration * 1000 + 50 < chart.durationMs) {
     audioReady = false;
+    audioFailed = true; updateAudioBadge();
     setMessage('音频短于谱面时长，请选择完整配套音频。', false, 0);
     return;
   }
   audioReady = true;
+  audioFailed = false; updateAudioBadge();
   resetSession();
   if (audioMode === 'local') setMessage('本地音频已就绪，可以开始练习。', true);
 });
 localAudio.addEventListener('error', () => {
   if (audio !== localAudio) return;
   audioReady = false;
+  audioFailed = true; updateAudioBadge();
   if (audio.src) setMessage('无法读取音频，请尝试浏览器支持的格式。', false, 0);
 });
 localAudio.addEventListener('ended', () => { if (audio === localAudio && isPlaying) completePass(); });
@@ -452,6 +546,7 @@ function makeDemoAudio(durationMs = 32000, bpm = 120, firstBeat = 0, beatTimesMs
 function useDemo() {
   selectionId++; stopAudio();
   chart = demoChart; sourceType = 'demo'; startMs = 0; endMs = chart.durationMs;
+  currentIdentity=chartIdentity(sourceType,currentSong,chart);clearResult();
   musicStart = 0;
   updateMeta(); refreshRangeUi(); resetSession();
   replaceAudio(makeDemoAudio(), 'demo');
@@ -468,6 +563,7 @@ async function useSong(song = DEFAULT_SONG) {
     if (selection !== selectionId) return;
     currentSong = song;
     chart = parsed; sourceType = 'song'; startMs = 0; endMs = chart.durationMs; musicStart = 0;
+    currentIdentity=chartIdentity(sourceType,currentSong,chart);clearResult();
     audioReady = false;
     updateMeta(); refreshRangeUi(); resetSession();
     if (els.forgetAudio) els.forgetAudio.hidden=true;
@@ -534,6 +630,7 @@ async function useOnline() {
     await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),8000);})]);
     if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
+    updateAudioBadge();
     resetSession();
     setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
   } catch {
@@ -556,6 +653,7 @@ async function importChart(file) {
     const parsed = validateChart(JSON.parse(await file.text()));
     selectionId++; stopAudio();
     chart = parsed; sourceType = 'local'; startMs = 0; endMs = chart.durationMs;
+    currentIdentity=chartIdentity(sourceType,currentSong,chart);clearResult();
     audioReady = false;
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     audio = localAudio; audioUrl = null; audio.removeAttribute('src'); audio.load();
@@ -732,6 +830,16 @@ els.drawerToggle.addEventListener('click',() => setDrawerOpen(els.drawer.hidden)
 els.drawerClose.addEventListener('click',() => { setDrawerOpen(false); els.drawerToggle.focus(); });
 els.play.addEventListener('click',togglePlay);
 els.restart.addEventListener('click',() => { resetSession(); setMessage('已回到片段起点。',true); });
+$('seekBack10')?.addEventListener('click',()=>seekPractice((isPlaying?songTime():previewMs)-10000));
+$('seekForward10')?.addEventListener('click',()=>seekPractice((isPlaying?songTime():previewMs)+10000));
+els.quickToggle?.addEventListener('click',()=>setQuickMenu(els.quickMenu.hidden));
+$('markRangeA')?.addEventListener('click',()=>setRangeAtCurrent('A'));
+$('markRangeB')?.addEventListener('click',()=>setRangeAtCurrent('B'));
+$('clearRange')?.addEventListener('click',resetRange);
+document.addEventListener('click',event=>{if (els.quickMenu && !els.quickMenu.hidden && !event.target?.closest?.('.quick-range-wrap')) setQuickMenu(false);});
+els.resultOpen?.addEventListener('click',showResult);
+els.resultClose?.addEventListener('click',closeResult);
+els.resultDone?.addEventListener('click',closeResult);
 els.timelineSeek?.addEventListener('input',()=>{seeking=true;updateTime(Number(els.timelineSeek.value),true);});
 els.timelineSeek?.addEventListener('change',()=>seekPractice(Number(els.timelineSeek.value)));
 els.timelineSeek?.addEventListener('keydown',event=>{if(event.code==='ArrowLeft'||event.code==='ArrowRight'){event.preventDefault();event.stopPropagation();seekPractice(Number(els.timelineSeek.value)+(event.code==='ArrowLeft'?-10000:10000));}});
@@ -741,6 +849,11 @@ els.loop.addEventListener('change',() => { if (isPlaying) pause(); resetSession(
 els.scroll.addEventListener('input',() => {
   scrollRate=Number(els.scroll.value); els.scrollLabel.textContent=scrollRate.toFixed(1)+'×';
   try { localStorage.setItem('romm-trainer-scroll',String(scrollRate)); } catch {}
+});
+els.hitVolume?.addEventListener('input',()=>{
+  hitSound.setVolume(els.hitVolume.value);
+  if (els.hitVolumeLabel) els.hitVolumeLabel.textContent=hitSound.getVolume()+'%';
+  if (hitSound.getVolume()>0) hitSound.unlock();
 });
 els.hitWindow.addEventListener('input',() => {
   els.hitWindowLabel.textContent='±'+els.hitWindow.value+' ms';
@@ -827,6 +940,7 @@ els.forgetAudio?.addEventListener('click',async()=>{
 function pressLane(lane, inputId) {
   if (!isPlaying || activeInputs.has(inputId)) return;
   activeInputs.set(inputId,lane);
+  hitSound.play();
   if (held.has(lane)) return;
   held.add(lane);
   const songMs=songTime();
@@ -869,6 +983,7 @@ for (let lane=0; lane<6; lane++) {
   button.addEventListener('contextmenu',event=>event.preventDefault());
 }
 window.addEventListener('keydown',(event) => {
+  if (els.resultDialog?.open) return;
   if ($('libraryView')?.hidden === false) return;
   if ($('homeView')?.hidden === false && els.drawer.hidden) return;
   if (bindingIndex !== -1) {
@@ -881,18 +996,19 @@ window.addEventListener('keydown',(event) => {
     renderKeys(); return;
   }
   if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }
+  if (event.code === 'Escape' && els.quickMenu && !els.quickMenu.hidden) { event.preventDefault(); setQuickMenu(false); els.quickToggle.focus(); return; }
   if ($('homeView')?.hidden === false) return;
   if (event.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName)) return;
   if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {event.preventDefault();if (!event.repeat) seekPractice((isPlaying?songTime():previewMs)+(event.code==='ArrowLeft'?-10000:10000));return;}
-  if (event.code === 'Space') { event.preventDefault(); if (!event.repeat) togglePlay(); return; }
+  if (event.code === 'Space') { if (event.target instanceof HTMLElement && /^(BUTTON|A)$/.test(event.target.tagName)) return; event.preventDefault(); if (!event.repeat) togglePlay(); return; }
   const lane=keys.indexOf(event.code);
   if (lane < 0 || event.repeat || !isPlaying) return;
   event.preventDefault();
   pressLane(lane,'key:'+event.code);
 });
-window.addEventListener('romm:library-open',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
+window.addEventListener('romm:library-open',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setQuickMenu(false); setDrawerOpen(false); });
 window.addEventListener('romm:select-song',event=>{ if (event.detail?.status === 'ready' && event.detail.chartUrl) void useSong(event.detail); });
-window.addEventListener('romm:show-home',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
+window.addEventListener('romm:show-home',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setQuickMenu(false); setDrawerOpen(false); });
 window.addEventListener('romm:home-demo',useDemo);
 window.addEventListener('romm:open-settings',()=>{ setDrawerOpen(true); els.drawerClose.focus(); });
 window.addEventListener('romm:practice-visible',scheduleStageFrame);
@@ -901,6 +1017,7 @@ window.addEventListener('romm:language-changed',()=>{
   setSavedAudioStatus(lastSavedAudioStatus);
   els.message.textContent=lastMessageEn === null ? translate(lastMessage) : tr(lastMessage,lastMessageEn,lastMessageJa ?? undefined); els.feedback.textContent=translate(lastFeedback);
   els.songAudioStatus.textContent=translate(audioMode === 'online' ? '在线原声 · 同步待校准' : audioMode === 'metronome' ? '节拍伴奏 · 无歌曲原声' : '本地音频');
+  updateAudioBadge(); renderResult();
   const label=$('onlineTrackLabel');
   if (label && sourceType === 'song') label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong), '公式サウンドトラック · ' + songName(currentSong));
 });

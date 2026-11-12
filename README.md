@@ -25,29 +25,30 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **手动练习**：PC 使用六键键盘，手机可使用六轨触屏，支持单点、同时按和长按。
 - **界面语言**：在设置中切换简体中文、English 和日本語，选择保存在当前浏览器。
 - **开始倒计时**：开始或继续练习前显示 3 秒倒计时，可随时取消。
-- **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
-- **进度跳转**：拖动顶部进度条，或使用左右方向键快退、快进 10 秒；跳转后本轮完成度从当前位置重新计算。
-- **练习设置**：调整音乐播放速度、音符下落速度、判定范围和时间偏移。
+- **片段循环**：设置 A–B 练习区间，循环默认关闭，可手动开启；每轮开始前保留一小段引导时间。
+- **进度跳转**：拖动顶部进度条，或使用左右方向键、手机快捷按钮快退或快进 10 秒；手机也可从当前位置设置 A、B 点。跳转后本轮完成度从当前位置重新计算。
+- **练习设置**：调整音乐播放速度、音符下落速度、判定范围、时间偏移和按键音量。手动按键时可听到合成琴音，音量设为零即可关闭。
 - **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
-- **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
+- **练习反馈**：查看实时完成度、命中、连击、漏击及偏早或偏晚；完成一轮后查看结果，同一谱面版本、区间和设置的最佳成绩保存在当前浏览器。
 - **首页与收藏**：从精选曲目或专辑进入练习，在曲目详情中收藏歌曲；收藏仅保存在当前浏览器中。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
-- **曲目典藏**：按专辑浏览或使用中、英、日文曲名及日语假名搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
-- **伴奏选择**：部分曲目提供官方在线原声入口；在线音源不可用时自动切换节拍伴奏。也可选择本地配套音频并保存在当前设备，下次选曲自动载入；本项目不会上传音频。节拍伴奏不包含歌曲原声，在线原声与游戏内剪辑的同步仍待逐首校准。
+- **曲目典藏**：按专辑和谱面状态筛选，或使用中、英、日文曲名及日语假名搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
+- **伴奏选择**：练习画面显示当前音源状态。部分曲目提供官方在线原声入口；在线音源不可用时自动切换节拍伴奏。也可选择本地配套音频并保存在当前设备，下次选曲自动载入；本项目不会上传音频。节拍伴奏不包含歌曲原声，在线原声与游戏内剪辑的同步仍待逐首校准。
 
 ## Core Features
 
 - **Manual practice**: Use six keyboard lanes on PC or touch the lanes on mobile, including taps, simultaneous notes, and holds.
 - **Interface language**: Switch between Simplified Chinese, English, and Japanese in settings; the choice is saved in your browser.
 - **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
-- **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
-- **Practice settings**: Adjust the music playback rate, note scroll speed, hit window, and timing offset independently.
+- **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
+- **Seeking**: Drag the timeline or use the arrow keys or mobile buttons to seek by ten seconds. Mobile controls can also set A and B from the current position; seeking restarts scoring from that position.
+- **Practice settings**: Adjust playback rate, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
-- **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
+- **Practice feedback**: See live completion, hits, combo, misses, and early or late timing, then review each finished attempt. Personal bests are saved in the current browser separately for each chart version, section, and set of practice settings.
 - **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
-- **Song library**: Browse or search 150 titles by their Chinese, English, Japanese, or Japanese kana names, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
-- **Accompaniment**: Some songs link to an official online soundtrack; unavailable online audio falls back to a metronome. User-selected local audio can be saved in the current browser and loaded again for that song without uploading it. The metronome does not contain the soundtrack; alignment with each in-game edit remains provisional.
+- **Song library**: Browse by album, filter by chart status, or search 150 titles by their Chinese, English, Japanese, or Japanese kana names, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
+- **Accompaniment**: The practice screen shows the current audio source. Some songs link to an official online soundtrack; unavailable online audio falls back to a metronome. User-selected local audio can be saved in the current browser and loaded again for that song without uploading it. The metronome does not contain the soundtrack; alignment with each in-game edit remains provisional.
 
 ## 声明
 
