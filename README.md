@@ -22,7 +22,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 ## 核心功能
 
-- **手动练习**：PC 使用六键键盘，手机横屏后可使用六轨触屏，支持单点、同时按和长按。
+- **手动练习**：PC 使用六键键盘，手机可使用六轨触屏，支持单点、同时按和长按。
+- **界面语言**：在设置中切换简体中文和 English，选择保存在当前浏览器。
 - **开始倒计时**：开始或继续练习前显示 3 秒倒计时，可随时取消。
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键快退、快进 10 秒；跳转后本轮完成度从当前位置重新计算。
@@ -36,7 +37,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 ## Core Features
 
-- **Manual practice**: Use six keyboard lanes on PC or touch the lanes in landscape on mobile, including taps, simultaneous notes, and holds.
+- **Manual practice**: Use six keyboard lanes on PC or touch the lanes on mobile, including taps, simultaneous notes, and holds.
+- **Interface language**: Switch between Simplified Chinese and English in settings; the choice is saved in your browser.
 - **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
 - **Practice settings**: Adjust the music playback rate, note scroll speed, hit window, and timing offset independently.
@@ -81,7 +83,7 @@ npm test
 
 默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。首页可浏览专辑、打开收藏和调整练习设置；在曲目详情下方点击星标即可收藏。练习页的「曲谱与设置」可导入文件并调整练习区间。
 
-Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
+Default keys: A, S, D, J, K, L. Press Space to pause or resume. Open “Charts & Settings” at the top right to import files and adjust the practice section or key bindings. Select English under “语言 / Language” in settings.
 
 ## 部署 | Deployment
 

@@ -1,4 +1,5 @@
 import { favorites } from './favorites.js';
+import { tr, songName, groupName } from './i18n.js';
 
 const $=id=>document.getElementById(id);
 const home=$('homeView'), gameFrame=document.querySelector('.game-frame');
@@ -32,12 +33,12 @@ function renderFeatured() {
   for(const id of featuredIds) {
     const song=songs.find(item=>item.id===id && item.status==='ready');
     if(!song)continue;
-    const button=el('button','featured-song');button.type='button';button.setAttribute('aria-label',`练习 ${song.title}`);
+    const button=el('button','featured-song');button.type='button';button.setAttribute('aria-label',tr(`练习 ${song.title}`,`Practice ${songName(song)}`));
     const picture=el('span','featured-picture');
     if(song.cover){const image=el('img');image.src=song.cover;image.alt='';picture.append(image);}else picture.textContent='♫';
     const details=el('span','featured-copy'),line=el('span','featured-level');
-    line.append(el('span','featured-keys','六键'),el('span','featured-stars','★'.repeat(song.levels?.[3] || 0)),el('span','featured-diamonds','◆'.repeat(Math.max(0,10-(song.levels?.[3] || 0)))));
-    details.append(el('strong','',song.title),line);
+    line.append(el('span','featured-keys',tr('六键','6 Keys')),el('span','featured-stars','★'.repeat(song.levels?.[3] || 0)),el('span','featured-diamonds','◆'.repeat(Math.max(0,10-(song.levels?.[3] || 0)))));
+    details.append(el('strong','',songName(song)),line);
     button.append(picture,details,el('span','featured-play','▶'));button.addEventListener('click',()=>openPractice(song));featuredEl.append(button);
   }
 }
@@ -47,18 +48,18 @@ function renderHero() {
   if(!group)return;
   $('homeHeroImage').src=artFor(group) || '';
   $('homeHeroImage').style.objectPosition=id==='Encounter2'?'center 25%':'center 47%';
-  $('homeHeroTitle').textContent=group.title.replace('·',' · ');
-  $('homeHeroOpen').setAttribute('aria-label',`浏览 ${group.title} 专辑`);
+  $('homeHeroTitle').textContent=groupName(group);
+  $('homeHeroOpen').setAttribute('aria-label',tr(`浏览 ${group.title} 专辑`,`Browse ${groupName(group)} album`));
   const pages=$('homeHeroPages');pages.replaceChildren();
   heroIds.forEach((groupId,index)=>{
     const candidate=catalog.groups.find(item=>item.id===groupId);
     const button=el('button','hero-dot');button.type='button';
-    button.setAttribute('aria-label',`展示 ${candidate?.title || '专辑'}`);button.setAttribute('aria-pressed',String(index===heroIndex));
+    button.setAttribute('aria-label',tr(`展示 ${candidate?.title || '专辑'}`,`Show ${candidate ? groupName(candidate) : 'album'}`));button.setAttribute('aria-pressed',String(index===heroIndex));
     button.addEventListener('click',()=>{heroIndex=index;lastHeroInteraction=Date.now();renderHero();pages.children[index]?.focus();});pages.append(button);
   });
 }
 function makeRecord({title,image,kind,onClick,count}) {
-  const button=el('button','album-record');button.type='button';button.title=title;button.setAttribute('aria-label',count===undefined?title:`${title}，${count} 首`);
+  const button=el('button','album-record');button.type='button';button.title=title;button.setAttribute('aria-label',count===undefined?title:tr(`${title}，${count} 首`,`${title}, ${count} ${count===1?'song':'songs'}`));
   const sleeve=el('span','album-sleeve '+(kind || ''));
   if(image){const img=el('img');img.src=image;img.alt='';img.loading='lazy';sleeve.append(img);}
   else sleeve.append(el('span','album-symbol',kind==='favorite'?'★':kind==='all'?'▦':'♫'));
@@ -70,27 +71,27 @@ function renderAlbums() {
   albumsEl.replaceChildren();
   const songs=catalog?.groups.flatMap(group=>group.songs) || [];
   const favoriteCount=songs.filter(song=>favorites.has(song.id)).length;
-  albumsEl.append(makeRecord({title:'全部歌曲',kind:'all',onClick:()=>openLibrary()}));
-  albumsEl.append(makeRecord({title:'我的收藏',kind:'favorite',count:favoriteCount,onClick:()=>openLibrary({favoritesOnly:true})}));
-  for(const group of catalog?.groups || []) albumsEl.append(makeRecord({title:group.title.replace('·',' · '),image:artFor(group),onClick:()=>openLibrary({groupId:group.id})}));
+  albumsEl.append(makeRecord({title:tr('全部歌曲','All Songs'),kind:'all',onClick:()=>openLibrary()}));
+  albumsEl.append(makeRecord({title:tr('我的收藏','Favorites'),kind:'favorite',count:favoriteCount,onClick:()=>openLibrary({favoritesOnly:true})}));
+  for(const group of catalog?.groups || []) albumsEl.append(makeRecord({title:groupName(group),image:artFor(group),onClick:()=>openLibrary({groupId:group.id})}));
   albumsEl.classList.toggle('collapsed',!expanded);
   $('homeExpand').setAttribute('aria-expanded',String(expanded));
-  $('homeExpand').replaceChildren(document.createTextNode(expanded?'收起 ':'展开 '),el('span','',expanded?'⌃':'⌄'));
+  $('homeExpand').replaceChildren(document.createTextNode(expanded?tr('收起 ','Collapse '):tr('展开 ','Expand ')),el('span','',expanded?'⌃':'⌄'));
 }
 
 const homeTheme=el('section','home-theme-setting');
-const homeThemeHeading=el('h3','home-theme-heading','演奏界面');
-const themeLabel=el('label','','谱面主题');themeLabel.htmlFor='homeThemeSelect';
-const themeSelect=el('select');themeSelect.id='homeThemeSelect';themeSelect.setAttribute('aria-label','谱面主题');
+const homeThemeHeading=el('h3','home-theme-heading',tr('演奏界面','Performance'));
+const themeLabel=el('label','',tr('谱面主题','Stage Theme'));themeLabel.htmlFor='homeThemeSelect';
+const themeSelect=el('select');themeSelect.id='homeThemeSelect';themeSelect.setAttribute('aria-label',tr('谱面主题','Stage Theme'));
 for(const option of $('themeSelect').options)themeSelect.append(option.cloneNode(true));
 homeTheme.append(themeLabel,themeSelect);
 const controlColumn=drawer.querySelector('.control-column');
 controlColumn.insertBefore(homeThemeHeading,drawer.querySelector('.settings-panel'));
 controlColumn.insertBefore(homeTheme,drawer.querySelector('.settings-panel'));
-const settingsNav=el('nav','home-settings-nav');settingsNav.setAttribute('aria-label','设置分类');
-const navItems=[['基础',homeThemeHeading],['键位',drawer.querySelector('.key-panel')]];
-for(const [label,target] of navItems){
-  const button=el('button','settings-nav-item',label);button.type='button';button.setAttribute('aria-current',label==='基础'?'true':'false');
+const settingsNav=el('nav','home-settings-nav');settingsNav.setAttribute('aria-label',tr('设置分类','Settings categories'));
+const navItems=[[tr('基础','General'),drawer.querySelector('.language-setting')],[tr('键位','Keys'),drawer.querySelector('.key-panel')]];
+for(const [index,[label,target]] of navItems.entries()){
+  const button=el('button','settings-nav-item',label);button.type='button';button.setAttribute('aria-current',index===0?'true':'false');
   button.addEventListener('click',()=>{settingsNav.querySelectorAll('button').forEach(item=>item.setAttribute('aria-current',String(item===button)));target.scrollIntoView({block:'start',behavior:'smooth'});});
   settingsNav.append(button);
 }
@@ -99,10 +100,10 @@ themeSelect.addEventListener('change',()=>{$('themeSelect').value=themeSelect.va
 function restoreDrawer() {
   if(!settingsFromHome)return;
   settingsFromHome=false;drawer.classList.remove('home-drawer');
-  drawerParent.insertBefore(drawer,drawerNext);drawer.querySelector('.drawer-head h2').textContent='曲谱与设置';backdrop.hidden=true;home.inert=false;$('homeSettingsOpen').focus();
+  drawerParent.insertBefore(drawer,drawerNext);drawer.querySelector('.drawer-head h2').textContent=tr('曲谱与设置','Charts & Settings');backdrop.hidden=true;home.inert=false;$('homeSettingsOpen').focus();
 }
 $('homeSettingsOpen').addEventListener('click',()=>{
-  settingsFromHome=true;home.inert=true;backdrop.hidden=false;document.querySelector('.app-viewport').append(drawer);drawer.classList.add('home-drawer');drawer.querySelector('.drawer-head h2').textContent='设置';
+  settingsFromHome=true;home.inert=true;backdrop.hidden=false;document.querySelector('.app-viewport').append(drawer);drawer.classList.add('home-drawer');drawer.querySelector('.drawer-head h2').textContent=tr('设置','Settings');
   settingsNav.querySelectorAll('button').forEach((item,index)=>item.setAttribute('aria-current',String(index===0)));controlColumn.scrollTop=0;
   themeSelect.value=$('themeSelect').value;window.dispatchEvent(new Event('romm:open-settings'));
 });
@@ -124,6 +125,15 @@ $('homeHeroOpen').addEventListener('click',()=>openLibrary({groupId:heroIds[hero
 $('homeExpand').addEventListener('click',()=>{expanded=!expanded;renderAlbums();});
 window.addEventListener('romm:show-home',()=>{home.hidden=false;home.inert=false;gameFrame.inert=true;renderAlbums();$('homeResume').focus();});
 window.addEventListener('romm:favorites-changed',renderAlbums);
+window.addEventListener('romm:language-changed',()=>{
+  homeThemeHeading.textContent=tr('演奏界面','Performance'); themeLabel.textContent=tr('谱面主题','Stage Theme');
+  themeSelect.setAttribute('aria-label',tr('谱面主题','Stage Theme'));
+  [...themeSelect.options].forEach((option,index)=>{option.textContent=$('themeSelect').options[index].textContent;});
+  settingsNav.setAttribute('aria-label',tr('设置分类','Settings categories'));
+  settingsNav.children[0].textContent=tr('基础','General'); settingsNav.children[1].textContent=tr('键位','Keys');
+  drawer.querySelector('.drawer-head h2').textContent=settingsFromHome?tr('设置','Settings'):tr('曲谱与设置','Charts & Settings');
+  if(catalog){renderFeatured();renderHero();} renderAlbums();
+});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)lastHeroInteraction=Date.now();});
 setInterval(()=>{
   const hero=document.querySelector('.home-hero');
@@ -135,4 +145,4 @@ gameFrame.inert=true;
 try {
   const response=await fetch('./data/catalog.json');if(!response.ok)throw Error('catalog');
   catalog=await response.json();renderFeatured();renderHero();renderAlbums();
-} catch {featuredEl.replaceChildren(el('p','home-loading','曲目加载失败，请检查网络后刷新。'));renderAlbums();}
+} catch {featuredEl.replaceChildren(el('p','home-loading',tr('曲目加载失败，请检查网络后刷新。','Unable to load songs. Check your connection and refresh.')));renderAlbums();}
