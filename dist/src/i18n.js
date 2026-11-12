@@ -10,6 +10,7 @@ const translations = {
   '后退 10 秒':'Back 10 seconds', '前进 10 秒':'Forward 10 seconds', '设置练习区间':'Set practice section',
   '当前位置设为 A':'Set A to current time', '当前位置设为 B':'Set B to current time', '恢复全曲':'Use full song',
   '查看上一轮成绩':'View last result', '成绩':'Results', '示范节拍':'Demo metronome', '节拍伴奏 · 无原曲':'Metronome · No song',
+  '练习音量':'Practice audio volume', '鸽羽月露':'Moonlit Feathers', '流连欢宴':'Lingering Feast', '疏影引蝶映梅红':'Butterflies and Plum Blossoms', '聆泉浮莲':'Lotus on the Spring', '轮变的蚀焰':'Flames of Change', '镜烟的白星':'White Star in the Mirror', '谧海的冰牙':'Ice Fangs of the Sea', '慧心霜樱':'Frosted Sakura',
   '在线原声 · 加载中':'Online audio · Loading', '本地音频 · 加载中':'Local audio · Loading', '本地音频不可用':'Local audio unavailable', '按键音量':'Key sound volume', '背景音乐音量':'Background music volume',
   '练习结果':'Practice Result', '关闭成绩':'Close result', '最高连击':'Max Combo', '谱面状态':'Chart status',
   '全部状态':'All statuses', '可练习':'Playable', '谱面待核对':'Needs review', '暂缺谱面':'Unavailable',

@@ -22,3 +22,12 @@
 .stage-wrap[data-theme="dendro"]{background:radial-gradient(ellipse at 50% 110%,#8aff79 0,transparent 55%),linear-gradient(180deg,#142a4a 0%,#1b5361 49%,#31bb84 100%)}
 .stage-wrap[data-theme="dream"]{background:radial-gradient(ellipse at 50% 110%,#d3ff82 0,transparent 55%),linear-gradient(180deg,#30466a 0%,#255567 49%,#76c97c 100%)}
 .stage-wrap[data-theme="frost"]{background:radial-gradient(ellipse at 50% 110%,#25f2ca 0,transparent 55%),linear-gradient(180deg,#071a30 0%,#124759 50%,#18aa9a 100%)}
+
+.stage-wrap[data-theme="moonfeather"]{background:radial-gradient(ellipse at 50% 110%,#bffcff 0,transparent 55%),linear-gradient(180deg,#312768 0%,#434fbc 55%,#85bfff 100%)}
+.stage-wrap[data-theme="feast"]{background:radial-gradient(ellipse at 50% 110%,#b2fff5 0,transparent 55%),linear-gradient(180deg,#2e2455 0%,#414781 55%,#84bfff 100%)}
+.stage-wrap[data-theme="plum"]{background:radial-gradient(ellipse at 50% 110%,#ffe384 0,transparent 55%),linear-gradient(180deg,#202e48 0%,#674650 55%,#f59c56 100%)}
+.stage-wrap[data-theme="lotus"]{background:radial-gradient(ellipse at 50% 110%,#e4d6ff 0,transparent 55%),linear-gradient(180deg,#080e4f 0%,#234caa 55%,#83b5ff 100%)}
+.stage-wrap[data-theme="flameheart"]{background:radial-gradient(ellipse at 50% 110%,#ffb7d8 0,transparent 55%),linear-gradient(180deg,#1c151e 0%,#522952 55%,#d65b9d 100%)}
+.stage-wrap[data-theme="whitestar"]{background:radial-gradient(ellipse at 50% 110%,#e3d1ff 0,transparent 55%),linear-gradient(180deg,#1d143d 0%,#413079 55%,#a89aff 100%)}
+.stage-wrap[data-theme="icefang"]{background:radial-gradient(ellipse at 50% 110%,#a7eaff 0,transparent 55%),linear-gradient(180deg,#1b2b49 0%,#40335e 55%,#7aa9e2 100%)}
+.stage-wrap[data-theme="sakura"]{background:radial-gradient(ellipse at 50% 110%,#c7faff 0,transparent 55%),linear-gradient(180deg,#19264b 0%,#30466e 55%,#75bdea 100%)}

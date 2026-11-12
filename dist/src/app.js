@@ -36,6 +36,20 @@ const localAudio = new Audio();
 localAudio.preload = 'metadata';
 localAudio.preservesPitch = true;
 let audio = localAudio, onlineAudio = null, audioMode = 'demo', musicStart = 0;
+let practiceVolume = 100;
+try { const saved = localStorage.getItem('romm-trainer-practice-volume'); if (saved !== null && Number.isFinite(Number(saved))) practiceVolume = Math.max(0, Math.min(100, Number(saved))); } catch {}
+function setPracticeVolume(value) {
+  const next = Number(value);
+  if (!Number.isFinite(next)) return;
+  practiceVolume = Math.max(0, Math.min(100, next));
+  localAudio.volume = practiceVolume / 100;
+  if (onlineAudio) onlineAudio.volume = practiceVolume / 100;
+  if ($('practiceVolume')) $('practiceVolume').value = String(practiceVolume);
+  if ($('practiceVolumeLabel')) $('practiceVolumeLabel').textContent = practiceVolume + '%';
+  try { localStorage.setItem('romm-trainer-practice-volume', String(practiceVolume)); } catch {}
+}
+setPracticeVolume(practiceVolume);
+$('practiceVolume')?.addEventListener('input', event => setPracticeVolume(event.target.value));
 let selectionId = 0, playId = 0, playPending = false;
 let countdownTimer = null, finishCountdown = null, playWasResume = false;
 let localUnlock = null;
@@ -620,6 +634,7 @@ async function useOnline() {
     }, {videoId,trackStartSeconds:startSeconds});
     onlineAudio = player;
   }
+  onlineAudio.volume = practiceVolume / 100;
   const activeOnline = onlineAudio;
   audio = activeOnline;
   setAudioMode('online');
@@ -671,6 +686,11 @@ function notePath(x,y,radius,shape) {
   } else if (shape === 'hexagon') {
     for (let i=0;i<6;i++) { const angle=Math.PI/3*i-Math.PI/2, px=x+Math.cos(angle)*radius, py=y+Math.sin(angle)*radius; if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
     ctx.closePath();
+  } else if (shape === 'pudding' || shape === 'piano') {
+    const top=shape === 'pudding' ? radius*.55 : radius*.78;
+    ctx.moveTo(x-top,y-radius*.72);ctx.lineTo(x+top,y-radius*.72);ctx.lineTo(x+radius*.86,y+radius*.65);ctx.lineTo(x-radius*.86,y+radius*.65);ctx.closePath();
+  } else if (shape === 'lotus') {
+    for(let i=0;i<16;i++){const a=-Math.PI/2+i*Math.PI/8, r=radius*(i%2 ? .72 : 1);if(!i)ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);else ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();
   } else if (shape === 'heart') {
     ctx.moveTo(x,y-radius*.64);ctx.bezierCurveTo(x-radius*.7,y-radius*1.25,x-radius*1.28,y-radius*.42,x-radius*.85,y+radius*.13);
     ctx.quadraticCurveTo(x-radius*.5,y+radius*.62,x,y+radius);ctx.quadraticCurveTo(x+radius*.5,y+radius*.62,x+radius*.85,y+radius*.13);

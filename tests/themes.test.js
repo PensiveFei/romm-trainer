@@ -39,3 +39,16 @@ test('themes draw distinct scenery and manual-hit effects, with no effects outsi
   paintHit(expired.ctx,THEMES.wind,100,200,20,-.1);
   assert.equal(expired.calls.length,0);
 });
+
+
+test('the eight screenshot themes have distinct visual identities', () => {
+  const ids=['moonfeather','feast','plum','lotus','flameheart','whitestar','icefang','sakura'];
+  const drawings=new Set();
+  for(const id of ids) {
+    const {ctx,calls}=recorder();
+    paintBackdrop(ctx,THEMES[id],700,450);
+    paintHit(ctx,THEMES[id],100,200,20,.5);
+    drawings.add(JSON.stringify(calls));
+  }
+  assert.equal(drawings.size,ids.length);
+});

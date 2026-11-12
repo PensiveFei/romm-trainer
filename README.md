@@ -33,8 +33,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **背景音乐**：首页和曲库播放《梦之咏叹》的[原神官方音源](https://www.bilibili.com/audio/au1659248)，可在顶部关闭、在设置中调节音量；进入练习或试听其他曲目时暂停。浏览器限制自动播放时，点击音乐按钮即可尝试播放。
 - **片段循环**：设置 A–B 练习区间，循环默认关闭，可手动开启；每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键、手机快捷按钮快退或快进 10 秒；手机也可从当前位置设置 A、B 点。跳转后本轮完成度从当前位置重新计算。
-- **练习设置**：调整音乐播放速度、音符下落速度、判定范围、时间偏移和按键音量。手动按键时可听到合成琴音，音量设为零即可关闭。
-- **谱面主题**：切换八种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
+- **练习设置**：调整音乐播放速度、练习音量、音符下落速度、判定范围、时间偏移和按键音量。手动按键时可听到合成琴音，音量设为零即可关闭。
+- **谱面主题**：切换十六种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看实时完成度、命中、连击、漏击及偏早或偏晚；完成一轮后查看结果，同一谱面版本、区间和设置的最佳成绩保存在当前浏览器。
 - **首页与收藏**：从精选曲目或专辑进入练习，在曲目详情中收藏歌曲；收藏仅保存在当前浏览器中。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
@@ -49,8 +49,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Background music**: The home screen and library play the [official Dream Aria recording](https://www.bilibili.com/audio/au1659248). Use the top music button to turn it off and settings to adjust its volume; it pauses during practice and song previews. If autoplay is blocked, click the music button to start it.
 - **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
 - **Seeking**: Drag the timeline or use the arrow keys or mobile buttons to seek by ten seconds. Mobile controls can also set A and B from the current position; seeking restarts scoring from that position.
-- **Practice settings**: Adjust playback rate, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.
-- **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
+- **Practice settings**: Adjust playback rate, practice audio volume, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.
+- **Score themes**: Choose from sixteen themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live completion, hits, combo, misses, and early or late timing, then review each finished attempt. Personal bests are saved in the current browser separately for each chart version, section, and set of practice settings.
 - **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.

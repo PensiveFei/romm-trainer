@@ -11,6 +11,14 @@ export const THEMES = Object.freeze({
   pyro: palette('火与战争', 'pyro', '#ffbe7b', ['#fff2bc','#ff9741','#b65322'], ['#fff6a8','#ffcf3e','#d98421'], 'flame'),
   dendro: palette('草与智慧', 'dendro', '#c1ff9d', ['#e3fff4','#69ddba','#2b9984'], ['#edffbb','#a7db5a','#679f32'], 'heart'),
   dream: palette('静思浮梦', 'dream', '#d9ffad', ['#f3ffd2','#a5db59','#648f33'], ['#dbfff1','#72dfbd','#39a995'], 'flower'),
+  moonfeather: palette('鸽羽月露', 'moonfeather', '#d3e8ff', ['#efffff','#86d5ff','#4287d2'], ['#fff3ff','#e7a8fa','#a47cd9']),
+  feast: palette('流连欢宴', 'feast', '#a9f8ee', ['#fff6b5','#86ebce','#43a3a0'], ['#e7edff','#a6a6ff','#6775d4'], 'pudding'),
+  plum: palette('疏影引蝶映梅红', 'plum', '#ffce84', ['#fff0a8','#ffaf49','#d77530'], ['#ffe3b9','#ff827e','#d54a55'], 'flower'),
+  lotus: palette('聆泉浮莲', 'lotus', '#d4e7ff', ['#e9f7ff','#6ca8ff','#325fca'], ['#fff2f5','#f8a5c5','#cb6894'], 'lotus'),
+  flameheart: palette('轮变的蚀焰', 'flameheart', '#ffc6e4', ['#f9ddff','#c57aff','#764bc4'], ['#ffddd0','#ff729f','#bd347d'], 'heart'),
+  whitestar: palette('镜烟的白星', 'whitestar', '#e3d8ff', ['#fff1ff','#efafff','#b974d7'], ['#eef8ff','#8dceff','#5d85d9'], 'circle'),
+  icefang: palette('谧海的冰牙', 'icefang', '#bceeff', ['#e3ffff','#9ad9de','#5a999f'], ['#eeedff','#a4a5fa','#6869bf'], 'piano'),
+  sakura: palette('慧心霜樱', 'sakura', '#d8f6ff', ['#fff0fa','#f4a9d2','#cc78a8'], ['#eaffff','#a9e4ef','#6eafca'], 'flower'),
   frost: palette('霜月的祷言', 'frost', '#c8fff0', ['#ecfaff','#a7dcf4','#609fc8'], ['#e5ffc3','#77d6a6','#359d8a'], 'flower')
 });
 
@@ -39,6 +47,20 @@ export function paintMotif(ctx, motif, x, y, radius, color, angle = 0) {
   ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=.12;
   ctx.lineCap='round'; ctx.lineJoin='round';
   switch (motif) {
+    case 'moonfeather':
+      ctx.beginPath();ctx.arc(0,0,.78,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(80,119,206,.65)';ctx.beginPath();ctx.arc(-.25,-.15,.6,0,Math.PI*2);ctx.fill();break;
+    case 'feast':
+      ctx.beginPath();ctx.moveTo(-.7,.55);ctx.lineTo(-.48,-.35);ctx.quadraticCurveTo(0,-.8,.48,-.35);ctx.lineTo(.7,.55);ctx.closePath();ctx.stroke();ctx.beginPath();ctx.arc(0,-.55,.18,0,Math.PI*2);ctx.fill();break;
+    case 'plum': case 'sakura':
+      for(let i=0;i<5;i++){ctx.save();ctx.rotate(i*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-.47,.27,.42,0,0,Math.PI*2);ctx.fill();ctx.restore();}ctx.beginPath();ctx.arc(0,0,.14,0,Math.PI*2);ctx.fill();break;
+    case 'lotus':
+      for(let i=0;i<8;i++) leaf(ctx,0,0,i*Math.PI/4,.95);ctx.beginPath();ctx.arc(0,0,.2,0,Math.PI*2);ctx.fill();break;
+    case 'flameheart':
+      ctx.beginPath();ctx.moveTo(0,.9);ctx.bezierCurveTo(-1,.35,-.95,-.55,-.45,-.7);ctx.quadraticCurveTo(-.2,-.8,0,-.48);ctx.quadraticCurveTo(.2,-.8,.45,-.7);ctx.bezierCurveTo(.95,-.55,1,.35,0,.9);ctx.fill();break;
+    case 'whitestar':
+      ctx.beginPath();ctx.arc(0,0,.78,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(-.27,-.1,.1,0,Math.PI*2);ctx.arc(.27,-.1,.1,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-.3,.32);ctx.quadraticCurveTo(0,.55,.3,.32);ctx.stroke();break;
+    case 'icefang':
+      ctx.beginPath();ctx.rect(-.72,-.65,1.44,1.3);ctx.stroke();ctx.beginPath();ctx.moveTo(-.55,.18);ctx.lineTo(.55,.18);ctx.moveTo(-.3,.18);ctx.lineTo(-.3,.55);ctx.moveTo(0,.18);ctx.lineTo(0,.55);ctx.moveTo(.3,.18);ctx.lineTo(.3,.55);ctx.stroke();break;
     case 'wind':
       ctx.beginPath(); ctx.moveTo(-.95,.22); ctx.bezierCurveTo(-.42,-.25,.16,.57,.64,.06);
       ctx.bezierCurveTo(1,-.33,.47,-.7,.15,-.36); ctx.stroke();

@@ -30,6 +30,7 @@ export class YouTubeAudio {
     this.player = null;
     this.state = -1;
     this.rate = 1;
+    this._volume = 1;
     this.lastTime = 0;
     this.pendingSeek = null;
     this.pendingPlay = null;
@@ -43,7 +44,7 @@ export class YouTubeAudio {
         width: '100%', height: '200', videoId: this.videoId,
         playerVars: { start: this.trackStartSeconds, playsinline: 1, origin: location.origin },
         events: {
-          onReady: () => { clearTimeout(timeout); if (this.destroyed || !this.player) { reject(new Error('播放器已关闭')); return; } this.player.setPlaybackRate(this.rate); resolve(); },
+          onReady: () => { clearTimeout(timeout); if (this.destroyed || !this.player) { reject(new Error('播放器已关闭')); return; } this.player.setPlaybackRate(this.rate); this.player.setVolume?.(this._volume * 100); resolve(); },
           onStateChange: event => {
             if (this.destroyed) return;
             this.state = event.data;
@@ -93,6 +94,8 @@ export class YouTubeAudio {
   get paused() { return this.state !== 1; }
   set playbackRate(value) { this.rate = value; this.player?.setPlaybackRate?.(value); }
   get playbackRate() { return this.rate; }
+  set volume(value) { if (!Number.isFinite(Number(value))) return; this._volume = Math.max(0, Math.min(1, Number(value))); this.player?.setVolume?.(this._volume * 100); }
+  get volume() { return this._volume; }
 
   async play() {
     await this.ready;
