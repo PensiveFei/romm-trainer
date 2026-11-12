@@ -18,7 +18,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 ## 演示视频 | Demo Video
 
-[![千音习谱演示视频](https://qianyin.fun/demo/qianyin-demo-poster-1s.jpg)](https://qianyin.fun/demo/qianyin-demo.mp4)
+[![千音习谱演示视频](https://qianyin.fun/demo/qianyin-demo-v2-poster.jpg)](https://qianyin.fun/demo/qianyin-demo-v2.mp4)
 
 ## 核心功能
 
