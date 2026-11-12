@@ -73,6 +73,23 @@ npm test
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume. Use “曲谱与设置” at the top right to import files and adjust the practice section or key bindings.
 
+## 部署 | Deployment
+
+正式站点 <https://qianyin.fun> 以静态文件形式托管在 Cloudflare Pages，域名的 DNS 与证书由同一账号下的 Cloudflare Zone 管理。
+
+The production site is served as static files by Cloudflare Pages; DNS and TLS are handled by the Cloudflare Zone for the same domain.
+
+| 配置项 / Setting | 值 / Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Build output directory | `build` |
+
+`npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并给 `src/` 下的脚本和样式追加内容哈希。这一步用于避免 Cloudflare 边缘按文件名沿用旧缓存，产生「新 HTML + 旧 JS」的版本错配。
+
+`npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and appends a content hash to the scripts and styles under `src/`. The hash keeps a stale edge cache from pairing new HTML with old JavaScript.
+
+推送到 `main` 后由 Cloudflare Pages 自动构建发布；`qianyin.pages.dev` 同时可用。Pushes to `main` are built and published automatically; `qianyin.pages.dev` stays available as well.
+
 ## 曲目典藏 | Song Library
 
 曲目与试验谱依据[千音雅集乐谱仓库](https://md-ndv356.github.io/genshin-rmm/zh_cn/)的公开资料转换；当前仅开放传说难度。通过结构检查不等于已经与游戏逐音核对，包含变速的谱面及音源同步尤其需要继续验证。22 首未开放的曲目会在列表中显示状态，其中已找到官方原声入口的歌曲可以单独试听。部分游戏封面素材来自 [Genshin Impact Wiki](https://genshin-impact.fandom.com/wiki/Repertoire_of_Myriad_Melodies) 和[公开专辑图集](https://www.reddit.com/r/Genshin_Impact_Leaks/comments/1wo8uxn/72_rhythm_game_new_album_arts_new_nilou/)。个别曲目使用其[原声专辑图](https://open.spotify.com/embed/album/1FkxT3cP2litsldCdvWIM8)作为替代，并在界面标明。

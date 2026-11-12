@@ -1,0 +1,28 @@
+# 千音习谱 · Cloudflare Pages 响应头
+# 说明：Pages 会在部署时读取本文件，不会把它当作站点文件公开。
+# 注意：本文件必须保存为 UTF-8 无 BOM。
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+  X-Frame-Options: SAMEORIGIN
+
+# 入口 HTML 不缓存，保证更新后立刻生效
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 脚本与样式：5 分钟，兼顾更新及时性与带宽
+/*.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/*.css
+  Cache-Control: public, max-age=300, must-revalidate
+
+# 谱面与目录数据：中等缓存
+/data/*
+  Cache-Control: public, max-age=3600
+
+# 图片资源：一周缓存，减轻海外链路重复下载
+/assets/*
+  Cache-Control: public, max-age=604800
