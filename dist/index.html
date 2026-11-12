@@ -7,6 +7,7 @@
   <title>千音习谱 | ROMM-Trainer</title>
   <link rel="stylesheet" href="./src/styles.css">
   <link rel="stylesheet" href="./src/library.css">
+  <link rel="stylesheet" href="./src/home.css">
 </head>
 <body>
   <div class="game-frame">
@@ -23,7 +24,7 @@
         </div>
         <button class="reset-button" id="restartButton" type="button" title="回到片段起点"><span aria-hidden="true">↻</span> 重新开始</button>
       </div>
-      <div class="header-actions"><button class="library-open" id="libraryOpen" type="button" aria-controls="libraryView">♫ <span>全部曲目</span></button><button class="tools-toggle" id="toolsToggle" type="button" aria-controls="toolsDrawer" aria-expanded="false" aria-label="曲谱与练习设置"><span class="tools-orb" aria-hidden="true">✦</span><span class="tools-label">曲谱与设置</span></button></div>
+      <div class="header-actions"><button class="library-open" id="homeOpen" type="button">⌂ <span>首页</span></button><button class="library-open" id="libraryOpen" type="button" aria-controls="libraryView">♫ <span>全部曲目</span></button><button class="tools-toggle" id="toolsToggle" type="button" aria-controls="toolsDrawer" aria-expanded="false" aria-label="曲谱与练习设置"><span class="tools-orb" aria-hidden="true">✦</span><span class="tools-label">曲谱与设置</span></button></div>
     </header>
 
     <div class="app-shell">
@@ -135,12 +136,9 @@
         </section>
         <section class="panel settings-panel">
           <div class="panel-title"><h3>演奏设置</h3><span>02</span></div>
-          <div class="setting-label"><span>播放速度</span><strong id="speedLabel">1.00×</strong></div>
-          <div class="segments" id="rateButtons"><button type="button" data-rate="0.5">0.5×</button><button type="button" data-rate="0.75">0.75×</button><button type="button" data-rate="1" class="selected">1.0×</button></div>
-          <div class="setting-label scroll-label"><span>音符流速</span><strong id="scrollLabel">1.0×</strong></div>
-          <input id="scrollSpeed" type="range" min="0.7" max="2" step="0.1" value="1" aria-label="音符下落速度">
-          <div class="setting-label hit-window-label"><span>判定范围</span><strong id="hitWindowLabel">±180 ms</strong></div>
-          <input id="hitWindow" type="range" min="120" max="240" step="10" value="180" aria-label="判定范围（毫秒）" aria-describedby="hitWindowHelp">
+          <div class="settings-row"><div class="setting-label"><span>播放速度</span><strong id="speedLabel">1.00×</strong></div><div class="segments" id="rateButtons"><button type="button" data-rate="0.5">0.5×</button><button type="button" data-rate="0.75">0.75×</button><button type="button" data-rate="1" class="selected">1.0×</button></div></div>
+          <div class="settings-row"><div class="setting-label scroll-label"><span>音符流速</span><strong id="scrollLabel">1.0×</strong></div><input id="scrollSpeed" type="range" min="0.7" max="2" step="0.1" value="1" aria-label="音符下落速度"></div>
+          <div class="settings-row"><div class="setting-label hit-window-label"><span>判定范围</span><strong id="hitWindowLabel">±180 ms</strong></div><input id="hitWindow" type="range" min="120" max="240" step="10" value="180" aria-label="判定范围（毫秒）" aria-describedby="hitWindowHelp"></div>
           <p class="setting-help" id="hitWindowHelp">前后容许时间，调大更宽松</p>
           <div class="offset-row"><div><strong>时间偏移</strong><small>正值使判定稍后</small></div><div class="offset-input"><input id="offset" type="number" min="-300" max="300" step="5" value="0" aria-label="时间偏移（毫秒）"><span>ms</span></div></div>
         </section>
@@ -154,19 +152,36 @@
       </div>
     </div>
   </div>
-  <section id="libraryView" class="library-view" role="dialog" aria-modal="true" aria-label="选择练习曲目">
+  <main id="homeView" class="home-view" aria-label="千音习谱首页">
+    <header class="home-header">
+      <div class="home-brand"><span class="home-emblem" aria-hidden="true">♫</span><div><strong>千音习谱</strong><small>练习模式</small></div></div>
+      <nav class="home-nav" aria-label="首页工具"><button id="homeSettingsOpen" class="home-icon" type="button" aria-label="练习设置" title="练习设置">⚙</button><button id="homeHelpOpen" class="home-icon" type="button" aria-label="使用帮助" title="使用帮助">?</button><span class="home-nav-divider"></span><button id="homeResume" class="home-return" type="button" aria-label="返回练习" title="返回练习">↶</button></nav>
+    </header>
+    <div class="home-body">
+      <section class="home-top" aria-label="推荐练习与专辑">
+        <div class="home-featured"><button class="home-practice-banner" id="homeDemo" type="button"><span class="banner-record" aria-hidden="true">♫</span><span class="banner-copy"><strong>自由练习</strong><small>从示范谱开始</small></span><span class="banner-arrow" aria-hidden="true">›</span></button><div class="home-section-title"><h1>精选曲目</h1><span>手动练习</span></div><div id="homeFeaturedList" class="featured-list"><p class="home-loading">正在整理曲目…</p></div></div>
+        <div class="home-hero"><button class="home-hero-cover" id="homeHeroOpen" type="button" aria-label="查看专辑"><img id="homeHeroImage" src="./assets/encounter-covers/01-qkfbm4fgdarh1.png" alt=""><span class="hero-shade"></span><span class="hero-copy"><small>专辑精选</small><strong id="homeHeroTitle">相遇 · 悠久旅途之暇</strong><span>浏览专辑 &nbsp; ›</span></span></button><div class="hero-pagination" id="homeHeroPages" aria-label="切换精选专辑"></div></div>
+      </section>
+      <section class="home-albums" aria-labelledby="homeAlbumsTitle"><div class="home-section-title album-heading"><h2 id="homeAlbumsTitle">专辑列表</h2><button id="homeExpand" type="button" aria-expanded="true">收起 <span>⌃</span></button></div><div id="homeAlbums" class="album-records"><p class="home-loading">正在加载专辑…</p></div></section>
+    </div>
+    <div class="home-bottom-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+  </main>
+  <div id="homeSettingsBackdrop" class="home-settings-backdrop" hidden></div>
+  <dialog id="homeHelp" class="home-help"><i class="help-corner top-left" aria-hidden="true"></i><i class="help-corner top-right" aria-hidden="true"></i><i class="help-corner bottom-left" aria-hidden="true"></i><i class="help-corner bottom-right" aria-hidden="true"></i><div class="help-heading"><h2>千音习谱 · 练习帮助</h2><button id="homeHelpClose" type="button" aria-label="关闭帮助">×</button></div><div class="help-body"><section><h3>【曲目与练习】</h3><p>选择专辑或搜索歌曲，点击「前往练习」即可载入谱面。</p></section><section><h3>【演奏设置】</h3><p>默认按键为 A、S、D、J、K、L，空格键暂停或继续。键位和判定范围可以在设置中调整。</p></section><section><h3>【收藏】</h3><p>点击曲目详情下方的星标即可收藏，收藏保存在当前浏览器中。</p></section><p class="help-note">本工具为独立的手动练习项目，在线原声与游戏内剪辑仍需校准。</p></div></dialog>
+  <section id="libraryView" class="library-view" role="dialog" aria-modal="true" aria-label="选择练习曲目" hidden>
     <header class="library-header">
-      <div class="library-brand"><span class="library-emblem" aria-hidden="true">♫</span><div><strong>千音习谱 <span>/</span> 全部歌曲</strong><small>REPERTOIRE OF MYRIAD MELODIES</small></div></div>
+      <div class="library-brand"><span class="library-emblem" aria-hidden="true">♫</span><div><strong>千音习谱 <span>/</span> <b id="libraryHeading">全部歌曲</b></strong><small>REPERTOIRE OF MYRIAD MELODIES</small></div></div>
       <div class="library-header-side"><span class="library-edition">♫ &nbsp;曲目典藏</span><button id="libraryClose" class="library-close" type="button" aria-label="返回练习">↶</button></div>
     </header>
     <main class="library-content">
       <div class="library-collection"><div class="library-list-head"><div><span class="library-eyebrow">THE MUSIC COLLECTION</span><h1>曲目典藏 <i>✦</i></h1></div><span id="libraryCount" class="library-count">正在整理曲目…</span></div><div id="libraryGroups" class="library-groups" aria-label="曲目分类" tabindex="0"><p class="library-loading">正在打开曲目典藏…</p></div></div>
       <aside id="libraryDetail" class="library-detail" aria-live="polite"><div class="library-empty">选择一首曲目<br><small>查看谱面与练习信息</small></div></aside>
     </main>
-    <footer class="library-footer"><div class="library-search"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="搜索歌曲名称" aria-label="搜索歌曲名称"></div><div class="library-footer-note">✦ &nbsp;手动练习 · 谱面与音源同步持续校准</div><button id="libraryStart" class="library-start" type="button" disabled><span class="start-disc">▶</span><span>前往练习</span><span class="start-spark">✦</span></button></footer>
+    <footer class="library-footer"><div class="library-search"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="搜索歌曲名称" aria-label="搜索歌曲名称"></div><div class="library-footer-note">✦ &nbsp;手动练习 · 谱面与音源同步持续校准</div><span id="favoriteFeedback" class="sr-only" role="status" aria-live="polite"></span><button id="libraryFavorite" class="library-favorite" type="button" aria-label="收藏所选曲目" aria-pressed="false" disabled>★</button><button id="libraryStart" class="library-start" type="button" disabled><span class="start-disc">▶</span><span>前往练习</span><span class="start-spark">✦</span></button></footer>
     <div class="library-waves" aria-hidden="true"><i></i><i></i><i></i></div>
   </section>
   <script type="module" src="./src/app.js"></script>
   <script type="module" src="./src/library.js"></script>
+  <script type="module" src="./src/home.js"></script>
 </body>
 </html>

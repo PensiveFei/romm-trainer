@@ -17,18 +17,34 @@ test('every available catalog entry has a valid six-lane chart and matching meta
   assert.equal(songs.filter(song=>song.status==='missing').length,12);
   await Promise.all(songs.map(async song=>{
     if (song.cover) await access(new URL(song.cover.replace(/^\.\//,''),root));
-    if (song.status!=='ready') {assert.equal(song.chartUrl,null);assert.equal(song.audio,null);return;}
-    const chart=validateChart(await readJson(song.chartUrl.replace(/^\.\//,'')));
-    assert.equal(chart.title,song.title);
-    assert.equal(chart.notes.length,song.noteCount);
-    assert.equal(chart.durationMs,song.durationMs);
-    assert.ok(chart.beatTimesMs.length);
+    if (song.status!=='ready') assert.equal(song.chartUrl,null);
+    else {
+      const chart=validateChart(await readJson(song.chartUrl.replace(/^\.\//,'')));
+      assert.equal(chart.title,song.title);
+      assert.equal(chart.notes.length,song.noteCount);
+      assert.equal(chart.durationMs,song.durationMs);
+      assert.ok(chart.beatTimesMs.length);
+    }
     if (song.audio) {
       assert.match(song.audio.videoId,/^[A-Za-z0-9_-]{11}$/);
       assert.ok(song.audio.startSeconds>=0);
       assert.ok(song.audio.durationSeconds===null || song.audio.durationSeconds>=song.durationMs/1000);
     }
   }));
+});
+
+test('the restored album exposes its artwork and official sources without inventing missing charts',async()=>{
+  const {groups}=await readJson('data/catalog.json');
+  const songs=groups.find(group=>group.id==='Encounter2').songs;
+  assert.equal(songs.filter(song=>song.cover).length,13);
+  assert.equal(songs.filter(song=>song.coverKind==='soundtrack').length,2);
+  assert.equal(songs.filter(song=>song.audio).length,9);
+  const home=songs.find(song=>song.id==='_GMusic139');
+  assert.equal(home.audio.videoId,'-ZRFTNh39EI');
+  assert.equal(home.status,'missing');assert.equal(home.chartUrl,null);
+  const moon=songs.find(song=>song.id==='_GMusic151');
+  assert.deepEqual(moon.audio,{videoId:'b2dhv1PlyqE',startSeconds:3236,durationSeconds:185});
+  assert.equal(moon.status,'ready');
 });
 
 test('the existing Surasthana chart and catalog conversion have identical timing',async()=>{

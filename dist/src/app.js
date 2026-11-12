@@ -73,6 +73,7 @@ function applyTheme(id, save = true) {
   if (save) { try { localStorage.setItem('romm-trainer-theme', themeId); } catch {} }
 }
 function setDrawerOpen(open) {
+  const wasOpen = !els.drawer.hidden;
   if (open && isPlaying) pause();
   if (open && playPending) { stopAudio(); hasStarted = false; els.playText.textContent = '开始练习'; }
   if (!open && bindingIndex !== -1) {
@@ -82,6 +83,7 @@ function setDrawerOpen(open) {
   }
   els.drawer.hidden = !open;
   els.drawerToggle.setAttribute('aria-expanded', String(open));
+  if (wasOpen && !open) window.dispatchEvent?.(new Event('romm:settings-closed'));
 }
 function format(ms, tenths = false) {
   const safe = Math.max(0, Number.isFinite(ms) ? ms : 0);
@@ -279,8 +281,10 @@ function handleRange() {
 }
 function stopAudio() {
   if (isPlaying) pause();
+  const wasPending = playPending;
   playId++; playPending = false;
   audio.pause();
+  if (wasPending) { hasStarted=false; els.playText.textContent='开始练习'; els.playIcon.textContent='▶'; }
 }
 function replaceAudio(url, mode = 'local') {
   stopAudio();
@@ -627,6 +631,7 @@ els.audioFile.addEventListener('change',()=>{
 });
 window.addEventListener('keydown',(event) => {
   if ($('libraryView')?.hidden === false) return;
+  if ($('homeView')?.hidden === false && els.drawer.hidden) return;
   if (bindingIndex !== -1) {
     event.preventDefault();
     if (event.code === 'Escape') { bindingIndex=-1; els.keyHelp.textContent='已取消修改'; renderKeys(); return; }
@@ -637,6 +642,7 @@ window.addEventListener('keydown',(event) => {
     renderKeys(); return;
   }
   if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }
+  if ($('homeView')?.hidden === false) return;
   if (event.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName)) return;
   if (event.code === 'Space') { event.preventDefault(); if (!event.repeat) togglePlay(); return; }
   const lane=keys.indexOf(event.code);
@@ -659,6 +665,9 @@ window.addEventListener('keydown',(event) => {
 });
 window.addEventListener('romm:library-open',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
 window.addEventListener('romm:select-song',event=>{ if (event.detail?.status === 'ready' && event.detail.chartUrl) void useSong(event.detail); });
+window.addEventListener('romm:show-home',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
+window.addEventListener('romm:home-demo',useDemo);
+window.addEventListener('romm:open-settings',()=>{ setDrawerOpen(true); els.drawerClose.focus(); });
 window.addEventListener('keyup',(event)=>{
   const lane=keys.indexOf(event.code);
   if (lane < 0) return;

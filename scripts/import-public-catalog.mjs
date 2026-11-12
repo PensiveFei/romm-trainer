@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { validateChart } from '../dist/src/chart.js';
+import { encounterCovers, encounterAudio } from './encounter-assets.mjs';
 
 const source = process.argv[2];
 if (!source) throw new Error('Pass the directory containing romm-catalog.html, romm-chart-audit.json, romm-score-audit and romm-cover-index.');
@@ -46,7 +47,9 @@ for (const groupId of order) {
       const sourceFile = path.join(source, 'romm-cover-index', filename);
       if (fs.existsSync(sourceFile)) { fs.copyFileSync(sourceFile, path.join(coverDir, filename)); cover = './assets/covers/' + filename; }
     }
-    let chartUrl = null, audio = null;
+    const encounterCover=encounterCovers[id];
+    if (encounterCover && fs.existsSync(path.resolve('dist/assets/encounter-covers',encounterCover))) cover='./assets/encounter-covers/'+encounterCover;
+    let chartUrl = null, audio = encounterAudio[id] || null;
     if (status === 'ready') {
       const [score, measure, changes] = unpack(fs.readFileSync(path.join(source, 'romm-score-audit', id + '.html'), 'utf8'));
       let ms=0, bpm=m.bpm; const notes=[], held=Array(6).fill(null), tempoMap=[{atMs:0,bpm}], beatTimesMs=[];
@@ -77,9 +80,11 @@ for (const groupId of order) {
       validateChart(chart);
       const filename=id+'.json'; fs.writeFileSync(path.join(dest,filename),JSON.stringify(chart)); chartUrl='./data/library/'+filename; ready++;
       const matches=chapters.filter(c => normalize(c.title) === normalize(m.title.en_us) && (c.duration === null || c.duration >= m.duration));
-      if (matches.length === 1) { const c=matches[0]; audio={videoId:c.videoId,startSeconds:c.start,durationSeconds:c.duration}; online++; }
+      if (!audio && matches.length === 1) { const c=matches[0]; audio={videoId:c.videoId,startSeconds:c.start,durationSeconds:c.duration}; }
     } else if (status === 'review') pending++; else missing++;
-    songs.push({id,title:m.title.zh_cn,titleEn:m.title.en_us,bpm:m.bpm,bpmMin:m.bpm_min,bpmMax:m.bpm_max,durationMs:m.duration*1000,levels:[m.score.n_level,m.score.h_level,m.score.p_level,m.score.l_level],noteCount:m.score.l_notes,status,chartUrl,cover,audio});
+    if (audio) online++;
+    const coverKind=encounterCover==='shimmering-voyage-6.jpg'?'soundtrack':null;
+    songs.push({id,title:m.title.zh_cn,titleEn:m.title.en_us,bpm:m.bpm,bpmMin:m.bpm_min,bpmMax:m.bpm_max,durationMs:m.duration*1000,levels:[m.score.n_level,m.score.h_level,m.score.p_level,m.score.l_level],noteCount:m.score.l_notes,status,chartUrl,cover,audio,...(coverKind && {coverKind})});
   }
   groups.push({id:groupId,title:albums[groupId].zh_cn,songs});
 }
