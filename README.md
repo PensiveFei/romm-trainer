@@ -2,6 +2,10 @@
 
 Repertoire of Myriad Melodies Trainer
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Website](https://img.shields.io/badge/website-qianyin.fun-2ea44f.svg?style=flat-square)](https://qianyin.fun/)
+[![Deployed on Cloudflare Pages](https://img.shields.io/badge/deployed%20on-Cloudflare%20Pages-f38020.svg?style=flat-square&logo=cloudflare&logoColor=white)](https://qianyin.fun/)
+
 在线体验 / Play online: [qianyin.fun](https://qianyin.fun/)
 
 ## 项目介绍
