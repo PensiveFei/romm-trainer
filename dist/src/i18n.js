@@ -1,6 +1,8 @@
+import { japanese, japanesePatterns } from './ja.js';
+
 const STORAGE_KEY = 'romm-trainer-language';
 let language = 'zh-CN';
-try { if (globalThis.localStorage?.getItem(STORAGE_KEY) === 'en') language = 'en'; } catch { /* Storage is optional. */ }
+try { const saved=globalThis.localStorage?.getItem(STORAGE_KEY); if (saved === 'en' || saved === 'ja') language = saved; } catch { /* Storage is optional. */ }
 
 // The Chinese interface is the source of truth. Keep the original DOM text so
 // switching languages never replaces interactive children or user content.
@@ -100,14 +102,38 @@ const groupNames = {
 };
 
 export function getLanguage() { return language; }
-export function tr(zh, en) { return language === 'en' ? en : zh; }
-export function songName(song) { return tr(song.title, song.titleEn || song.title); }
-export function groupName(group) { return tr(group.title.replace('·', ' · '), groupNames[group.id] || group.title.replace('·', ' · ')); }
+// Production modules carry the build hash; reuse it for the cached catalog.
+export function catalogUrl() {
+  const moduleUrl=new URL(import.meta.url), url=new URL('../data/catalog.json',moduleUrl);
+  url.search=moduleUrl.search;
+  return url;
+}
+export function tr(zh, en, ja) {
+  if (language === 'en') return en;
+  if (language === 'ja') {
+    if (ja !== undefined) return ja;
+    if (typeof zh === 'string') {
+      const translated=translate(zh);
+      if (translated !== zh || Object.hasOwn(japanese, zh)) return translated;
+    }
+    return en;
+  }
+  return zh;
+}
+export function songName(song) { return tr(song.title, song.titleEn || song.title, song.titleJa || song.titleEn || song.title); }
+export function groupName(group) { return tr(group.title.replace('·', ' · '), groupNames[group.id] || group.title.replace('·', ' · '), group.titleJa || groupNames[group.id] || group.title.replace('·', ' · ')); }
+export function songMatches(song, query) {
+  const normalize=value=>String(value || '').normalize('NFKC').toLocaleLowerCase().replace(/[\u30a1-\u30f6]/g,char=>String.fromCharCode(char.charCodeAt(0)-0x60));
+  const term=normalize(query.trim());
+  return !term || [song.title,song.titleEn,song.titleJa,song.titleKana].some(value=>normalize(value).includes(term));
+}
 
 export function translate(value) {
-  if (language !== 'en' || typeof value !== 'string') return value;
-  if (Object.hasOwn(translations, value)) return translations[value];
-  for (const [pattern, render] of dynamicTranslations) { const match=value.match(pattern); if (match) return render(...match); }
+  if (language === 'zh-CN' || typeof value !== 'string') return value;
+  const dictionary=language === 'ja' ? japanese : translations;
+  if (Object.hasOwn(dictionary, value)) return dictionary[value];
+  const patterns=language === 'ja' ? japanesePatterns : dynamicTranslations;
+  for (const [pattern, render] of patterns) { const match=value.match(pattern); if (match) return render(...match, translate); }
   return value;
 }
 
@@ -137,7 +163,7 @@ const originalText = new WeakMap(), originalAttributes = new WeakMap();
 export function translateDocument(doc = globalThis.document) {
   if (!doc?.body || !doc.createTreeWalker) return;
   if (doc.documentElement) doc.documentElement.lang = language;
-  doc.title=tr('千音习谱 | ROMM-Trainer','ROMM Trainer | Repertoire of Myriad Melodies');
+  doc.title=tr('千音习谱 | ROMM-Trainer','ROMM Trainer | Repertoire of Myriad Melodies','千音習譜 | ROMM-Trainer');
   const walker=doc.createTreeWalker(doc.body, 4);
   while (walker.nextNode()) {
     const node=walker.currentNode;
@@ -145,11 +171,11 @@ export function translateDocument(doc = globalThis.document) {
     let original=originalText.get(node);
     if (original === undefined) {
       const text=node.nodeValue, trimmed=text.trim();
-      if (!Object.hasOwn(translations, trimmed)) continue;
+      if (!Object.hasOwn(translations, trimmed) && !Object.hasOwn(japanese, trimmed)) continue;
       original=text; originalText.set(node, original);
     }
     const trimmed=original.trim();
-    node.nodeValue=language === 'en' ? original.replace(trimmed, translations[trimmed]) : original;
+    node.nodeValue=language === 'zh-CN' ? original : original.replace(trimmed, translate(trimmed));
   }
   for (const node of doc.querySelectorAll('[aria-label], [title], [placeholder]')) {
     let originals=originalAttributes.get(node);
@@ -157,7 +183,7 @@ export function translateDocument(doc = globalThis.document) {
       if (!node.hasAttribute(name)) continue;
       const value=node.getAttribute(name);
       const original=originals?.[name] ?? value;
-      if (!Object.hasOwn(translations, original) && !/^第 \d+ 轨$/.test(original)) continue;
+      if (!Object.hasOwn(translations, original) && !Object.hasOwn(japanese, original) && !/^第 \d+ 轨$/.test(original)) continue;
       if (!originals) { originals={}; originalAttributes.set(node,originals); }
       originals[name]=original;
       node.setAttribute(name,translate(original));
@@ -166,7 +192,7 @@ export function translateDocument(doc = globalThis.document) {
 }
 
 export function setLanguage(value) {
-  language=value === 'en' ? 'en' : 'zh-CN';
+  language=value === 'en' || value === 'ja' ? value : 'zh-CN';
   try { globalThis.localStorage?.setItem(STORAGE_KEY, language); } catch { /* Session-only preference. */ }
   translateDocument();
   globalThis.window?.dispatchEvent?.(new Event('romm:language-changed'));

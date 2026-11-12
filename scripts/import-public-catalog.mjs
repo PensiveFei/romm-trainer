@@ -84,9 +84,9 @@ for (const groupId of order) {
     } else if (status === 'review') pending++; else missing++;
     if (audio) online++;
     const coverKind=encounterCover==='shimmering-voyage-6.jpg'?'soundtrack':null;
-    songs.push({id,title:m.title.zh_cn,titleEn:m.title.en_us,bpm:m.bpm,bpmMin:m.bpm_min,bpmMax:m.bpm_max,durationMs:m.duration*1000,levels:[m.score.n_level,m.score.h_level,m.score.p_level,m.score.l_level],noteCount:m.score.l_notes,status,chartUrl,cover,audio,...(coverKind && {coverKind})});
+    songs.push({id,title:m.title.zh_cn,titleEn:m.title.en_us,titleJa:m.title.ja_jp,titleKana:m.ja_kana,bpm:m.bpm,bpmMin:m.bpm_min,bpmMax:m.bpm_max,durationMs:m.duration*1000,levels:[m.score.n_level,m.score.h_level,m.score.p_level,m.score.l_level],noteCount:m.score.l_notes,status,chartUrl,cover,audio,...(coverKind && {coverKind})});
   }
-  groups.push({id:groupId,title:albums[groupId].zh_cn,songs});
+  groups.push({id:groupId,title:albums[groupId].zh_cn,titleJa:albums[groupId].ja_jp,songs});
 }
 fs.writeFileSync(path.resolve('dist/data/catalog.json'),JSON.stringify({version:1,groups}));
 console.log(JSON.stringify({ready,pending,missing,online,groups:groups.length}));

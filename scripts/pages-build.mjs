@@ -2,8 +2,8 @@
 //
 // 作用：把 dist/ 整理成可发布的 build/，并做两件仓库里没有的事：
 //   1. 叠加 deploy/ 下的 _headers 与 404.html
-//   2. 给 src 下所有 js/css 打内容哈希（全局版本号），避免 Cloudflare 边缘
-//      对同名文件沿用旧缓存，导致「新 HTML + 旧 JS」的版本错配
+//   2. 给 src 下所有 js/css 与曲库目录打内容哈希（全局版本号），避免缓存
+//      对同名文件沿用旧版本，导致页面、脚本与曲库数据错配
 //
 // Pages 面板设置：
 //   Build command        : node scripts/pages-build.mjs
@@ -48,6 +48,8 @@ async function run() {
   const srcFiles = (await fs.readdir(srcDir)).filter(f => /\.(js|css)$/.test(f)).sort();
   const hasher = crypto.createHash('sha256');
   for (const f of srcFiles) hasher.update(f).update(await fs.readFile(path.join(srcDir, f)));
+  const catalogPath=path.join(OUT, 'data', 'catalog.json');
+  if (await exists(catalogPath)) hasher.update('data/catalog.json').update(await fs.readFile(catalogPath));
   const version = hasher.digest('hex').slice(0, 8);
 
   // 3) 改写 index.html 的引用

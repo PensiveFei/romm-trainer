@@ -32,6 +32,24 @@ test('language selection translates interface text without replacing interactive
   assert.equal(i18n.songName({title:'自定义曲目'}),'自定义曲目');
   assert.deepEqual(events,['romm:language-changed']);
 
+  select.value='ja'; listeners.change();
+  assert.equal(stored.get('romm-trainer-language'),'ja');
+  assert.equal(document.documentElement.lang,'ja');
+  assert.equal(nodes[0].nodeValue,'練習モード');
+  assert.equal(nodes[1].nodeValue,'『原神』');
+  assert.equal(attributes.get('aria-label'),'練習設定');
+  assert.equal(i18n.translate('未命中 · 过早 300 ms'),'ミス · 300 ms 早い');
+  assert.equal(i18n.translate('谱面导入失败：谱面需要标题。'),'譜面の読み込みに失敗しました：譜面にはタイトルが必要です。');
+  const song={title:'净善的遐歌',titleEn:'Surasthana Fantasia',titleJa:'スラサタンナ幻想曲',titleKana:'すらさたんなげんそうきょく'};
+  assert.equal(i18n.songName(song),'スラサタンナ幻想曲');
+  assert.equal(i18n.songName({title:'自定义曲目'}),'自定义曲目');
+  for(const query of ['净善','surasthana','スラサタンナ','ｽﾗｻﾀﾝﾅ','すらさたんな']) assert.ok(i18n.songMatches(song,query),query);
+  assert.equal(i18n.songMatches(song,'不存在'),false);
+  const reloadedJa=await import('../dist/src/i18n.js?language-reload-ja-test');
+  assert.equal(reloadedJa.getLanguage(),'ja');
+  assert.equal(reloadedJa.catalogUrl().search,'?language-reload-ja-test');
+  assert.match(reloadedJa.catalogUrl().pathname,/\/dist\/data\/catalog\.json$/);
+  select.value='en'; listeners.change();
   const reloaded=await import('../dist/src/i18n.js?language-reload-test');
   assert.equal(reloaded.getLanguage(),'en');
   select.value='zh-CN'; listeners.change();

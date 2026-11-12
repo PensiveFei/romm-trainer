@@ -1,5 +1,5 @@
 import { favorites } from './favorites.js';
-import { tr, songName, groupName } from './i18n.js';
+import { tr, songName, groupName, songMatches, catalogUrl } from './i18n.js';
 
 const $ = id => document.getElementById(id);
 const view=$('libraryView'), groupsEl=$('libraryGroups'), detail=$('libraryDetail'), search=$('librarySearch');
@@ -40,10 +40,10 @@ function renderDetails() {
   if (!selected) { detail.append(element('div','library-empty',tr('选择一首曲目','Choose a song'))); return; }
   const song=selected, hero=coverFor(song,'detail-cover'), title=element('div','detail-name');
   if (song.coverKind==='soundtrack') hero.append(element('span','detail-cover-credit',tr('原声专辑图','Soundtrack artwork')));
-  title.append(element('h2','',songName(song)),element('small','',tr(song.titleEn || '',song.titleEn ? song.title : ''))); hero.append(title); detail.append(hero);
+  title.append(element('h2','',songName(song)),element('small','',tr(song.titleEn || '',song.titleEn ? song.title : '',song.titleJa === song.titleEn ? '' : song.titleEn || ''))); hero.append(title); detail.append(hero);
   const kicker=element('div','detail-kicker');
   kicker.append(element('strong','',tr('选择难度','Difficulty')),element('span','',`${Math.floor(song.durationMs/60000)}:${String(Math.floor(song.durationMs/1000)%60).padStart(2,'0')}  ·  ${song.bpm} BPM`)); detail.append(kicker);
-  const difficulty=tr(['普通','困难','大师','传说'],['Normal','Hard','Master','Legendary']), glyphs=['♩','♫','♬','✦'];
+  const difficulty=tr(['普通','困难','大师','传说'],['Normal','Hard','Master','Legendary'],['ノーマル','ハード','プロ','レジェンド']), glyphs=['♩','♫','♬','✦'];
   for (let i=0;i<4;i++) {
     const available=i===3 && song.status==='ready';
     const row=element('div','difficulty-row'+(available?' playable':''));
@@ -57,7 +57,7 @@ function renderDetails() {
     body.append(head,stars);row.append(body);detail.append(row);
   }
   const summary=element('p','detail-summary');
-  if (song.status==='ready') summary.textContent=tr(`传说 · ${song.noteCount} 个音符 · 六键练习谱。${song.audio?'提供官方在线原声入口，游戏剪辑同步待校准。':'提供节拍伴奏，可自行选择配套音频。'} 判定规则仍在校准中。`,`Legendary · ${song.noteCount} notes · 6-key practice chart. ${song.audio?'Online soundtrack available; synchronization may need adjustment.':'Metronome available; you can choose local audio.'} Judgment is still being calibrated.`);
+  if (song.status==='ready') summary.textContent=tr(`传说 · ${song.noteCount} 个音符 · 六键练习谱。${song.audio?'提供官方在线原声入口，游戏剪辑同步待校准。':'提供节拍伴奏，可自行选择配套音频。'} 判定规则仍在校准中。`,`Legendary · ${song.noteCount} notes · 6-key practice chart. ${song.audio?'Online soundtrack available; synchronization may need adjustment.':'Metronome available; you can choose local audio.'} Judgment is still being calibrated.`,`レジェンド · ${song.noteCount} ノーツ · 6キー練習譜面。${song.audio?'公式オンライン音源を利用できます。同期は調整中です。':'メトロノームを利用できます。端末の音源も選択できます。'} 判定ルールは調整中です。`);
   else summary.textContent=song.status==='review'?tr('公开谱面存在数据疑点，核对后再开放练习。','This public chart needs verification before practice is available.'):tr('当前资料中尚未找到可用的传说谱面。','No usable Legendary chart has been found for this song yet.');
   detail.append(summary);
   if (song.audio && /^[A-Za-z0-9_-]{11}$/.test(song.audio.videoId)) {
@@ -67,7 +67,7 @@ function renderDetails() {
     const mount=element('div','library-audio-mount');mount.hidden=true;
     toggle.addEventListener('click',()=>{
       if (!mount.hidden) {mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');return;}
-      const frame=element('iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`);
+      const frame=element('iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
       frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;
       frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;
       mount.append(frame);mount.hidden=false;toggle.textContent=tr('收起试听','Close preview');toggle.setAttribute('aria-expanded','true');
@@ -78,10 +78,10 @@ function renderDetails() {
 }
 function renderGroups(scrollToSelection=false) {
   groupsEl.replaceChildren();
-  const term=search.value.trim().toLocaleLowerCase(); let matches=0, selectedGroup=null;
+  const term=search.value.trim(); let matches=0, selectedGroup=null;
   for (const group of catalog.groups) {
     if (groupFilter && group.id!==groupFilter) continue;
-    const songs=group.songs.filter(s=>(!favoriteFilter || favorites.has(s.id)) && (!term || `${s.title} ${s.titleEn}`.toLocaleLowerCase().includes(term)));
+    const songs=group.songs.filter(s=>(!favoriteFilter || favorites.has(s.id)) && songMatches(s,term));
     if (!songs.length) continue;
     matches+=songs.length;
     const section=element('section','album-group'); section.style.setProperty('--album-color',groupColors[group.id]||'#302744');
@@ -107,14 +107,14 @@ function renderGroups(scrollToSelection=false) {
   }
   if (!matches) groupsEl.append(element('p','library-loading',favoriteFilter && !term?tr('还没有收藏曲目。可在歌曲详情下方点击星标收藏。','No favorites yet. Select the star in a song’s details to save it.'):tr('没有找到匹配的歌曲，请尝试其他名称。','No matching songs found. Try another name.')));
   const all=catalog.groups.flatMap(group=>group.songs);
-  count.textContent=groupFilter || favoriteFilter || term ? tr(`${matches} 首曲目`,`${matches} ${matches===1?'song':'songs'}`) : tr(`${all.length} 首曲目 · ${all.filter(song=>song.status==='ready').length} 首可练习`,`${all.length} songs · ${all.filter(song=>song.status==='ready').length} playable`);
+  count.textContent=groupFilter || favoriteFilter || term ? tr(`${matches} 首曲目`,`${matches} ${matches===1?'song':'songs'}`,`${matches}曲`) : tr(`${all.length} 首曲目 · ${all.filter(song=>song.status==='ready').length} 首可练习`,`${all.length} songs · ${all.filter(song=>song.status==='ready').length} playable`,`${all.length}曲 · ${all.filter(song=>song.status==='ready').length}曲を練習可能`);
   if (scrollToSelection && selectedGroup) requestAnimationFrame(()=>{groupsEl.scrollTop+=selectedGroup.getBoundingClientRect().top-groupsEl.getBoundingClientRect().top;});
 }
 function chooseInFilter() {
   if (!catalog) return;
-  const term=search.value.trim().toLocaleLowerCase();
+  const term=search.value.trim();
   const groups=catalog.groups.filter(group=>!groupFilter || group.id===groupFilter);
-  const songs=groups.flatMap(group=>group.songs).filter(song=>(!favoriteFilter || favorites.has(song.id)) && (!term || `${song.title} ${song.titleEn}`.toLocaleLowerCase().includes(term)));
+  const songs=groups.flatMap(group=>group.songs).filter(song=>(!favoriteFilter || favorites.has(song.id)) && songMatches(song,term));
   if (!selected || !songs.some(song=>song.id===selected.id)) selected=(groupFilter ? songs[0] : songs.find(song=>song.status==='ready') || songs[0]) || null;
 }
 function show(options={}) {
@@ -180,7 +180,7 @@ view.addEventListener('keydown',event=>{
   else if (!event.shiftKey && document.activeElement===focusable.at(-1)) {event.preventDefault();focusable[0].focus();}
 });
 try {
-  const response=await fetch('./data/catalog.json');
+  const response=await fetch(catalogUrl());
   if (!response.ok) throw new Error('曲目资料加载失败');
   catalog=await response.json();
   const songs=catalog.groups.flatMap(group=>group.songs);

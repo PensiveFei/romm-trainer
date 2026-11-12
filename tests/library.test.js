@@ -15,6 +15,9 @@ test('every available catalog entry has a valid six-lane chart and matching meta
   assert.equal(songs.filter(song=>song.status==='ready').length,128);
   assert.equal(songs.filter(song=>song.status==='review').length,10);
   assert.equal(songs.filter(song=>song.status==='missing').length,12);
+  assert.ok(catalog.groups.every(group=>group.titleJa));
+  assert.ok(songs.every(song=>song.titleJa && song.titleKana));
+  assert.equal(songs.find(song=>song.id==='_GMusic16').titleJa,'スラサタンナ幻想曲');
   await Promise.all(songs.map(async song=>{
     if (song.cover) await access(new URL(song.cover.replace(/^\.\//,''),root));
     if (song.status!=='ready') assert.equal(song.chartUrl,null);

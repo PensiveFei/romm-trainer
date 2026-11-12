@@ -23,7 +23,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 ## 核心功能
 
 - **手动练习**：PC 使用六键键盘，手机可使用六轨触屏，支持单点、同时按和长按。
-- **界面语言**：在设置中切换简体中文和 English，选择保存在当前浏览器。
+- **界面语言**：在设置中切换简体中文、English 和日本語，选择保存在当前浏览器。
 - **开始倒计时**：开始或继续练习前显示 3 秒倒计时，可随时取消。
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键快退、快进 10 秒；跳转后本轮完成度从当前位置重新计算。
@@ -32,13 +32,13 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **练习反馈**：查看当前区间的实时演奏完成度、命中、连击、漏击以及按键偏早或偏晚的情况。
 - **首页与收藏**：从精选曲目或专辑进入练习，在曲目详情中收藏歌曲；收藏仅保存在当前浏览器中。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
-- **曲目典藏**：按专辑浏览或搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
+- **曲目典藏**：按专辑浏览或使用中、英、日文曲名及日语假名搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
 - **伴奏选择**：部分曲目提供官方在线原声入口；在线音源不可用时自动切换节拍伴奏。也可选择本地配套音频并保存在当前设备，下次选曲自动载入；本项目不会上传音频。节拍伴奏不包含歌曲原声，在线原声与游戏内剪辑的同步仍待逐首校准。
 
 ## Core Features
 
 - **Manual practice**: Use six keyboard lanes on PC or touch the lanes on mobile, including taps, simultaneous notes, and holds.
-- **Interface language**: Switch between Simplified Chinese and English in settings; the choice is saved in your browser.
+- **Interface language**: Switch between Simplified Chinese, English, and Japanese in settings; the choice is saved in your browser.
 - **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
 - **Practice settings**: Adjust the music playback rate, note scroll speed, hit window, and timing offset independently.
@@ -46,7 +46,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Practice feedback**: See live performance completion for the selected section, hits, combo, misses, and early or late timing.
 - **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
-- **Song library**: Browse or search 150 titles by album, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
+- **Song library**: Browse or search 150 titles by their Chinese, English, Japanese, or Japanese kana names, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
 - **Accompaniment**: Some songs link to an official online soundtrack; unavailable online audio falls back to a metronome. User-selected local audio can be saved in the current browser and loaded again for that song without uploading it. The metronome does not contain the soundtrack; alignment with each in-game edit remains provisional.
 
 ## 声明
@@ -83,7 +83,7 @@ npm test
 
 默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。首页可浏览专辑、打开收藏和调整练习设置；在曲目详情下方点击星标即可收藏。练习页的「曲谱与设置」可导入文件并调整练习区间。
 
-Default keys: A, S, D, J, K, L. Press Space to pause or resume. Open “Charts & Settings” at the top right to import files and adjust the practice section or key bindings. Select English under “语言 / Language” in settings.
+Default keys: A, S, D, J, K, L. Press Space to pause or resume. Open “Charts & Settings” at the top right to import files and adjust the practice section or key bindings. Choose a language under “语言 / Language” in settings.
 
 ## 部署 | Deployment
 
@@ -96,9 +96,9 @@ The production site is served as static files by Cloudflare Pages; DNS and TLS a
 | Build command | `npm run build` |
 | Build output directory | `build` |
 
-`npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并给 `src/` 下的脚本和样式追加内容哈希。这一步用于避免 Cloudflare 边缘按文件名沿用旧缓存，产生「新 HTML + 旧 JS」的版本错配。
+`npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并根据脚本、样式和曲库目录的内容生成版本号。这一步用于避免缓存导致页面、脚本与曲库数据错配。
 
-`npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and appends a content hash to the scripts and styles under `src/`. The hash keeps a stale edge cache from pairing new HTML with old JavaScript.
+`npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and generates a version from the scripts, styles, and song catalog. The version keeps cached pages, code, and catalog data in sync.
 
 推送到 `main` 后由 Cloudflare Pages 自动构建发布；`qianyin.pages.dev` 同时可用。Pushes to `main` are built and published automatically; `qianyin.pages.dev` stays available as well.
 

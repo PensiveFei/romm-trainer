@@ -34,7 +34,7 @@ let countdownTimer = null, finishCountdown = null, playWasResume = false;
 let localUnlock = null;
 let chart = demoChart;
 let sourceType = 'demo';
-const DEFAULT_SONG = {id:'_GMusic16',title:'净善的遐歌',titleEn:'Surasthana Fantasia',chartUrl:'./data/surasthana-legend.json',levels:[1,2,5,6],audio:{videoId:'2SvpviExw1o',startSeconds:2582,durationSeconds:141}};
+const DEFAULT_SONG = {id:'_GMusic16',title:'净善的遐歌',titleEn:'Surasthana Fantasia',titleJa:'スラサタンナ幻想曲',chartUrl:'./data/surasthana-legend.json',levels:[1,2,5,6],audio:{videoId:'2SvpviExw1o',startSeconds:2582,durationSeconds:141}};
 let currentSong = DEFAULT_SONG;
 let rate = 1;
 let scrollRate = 1;
@@ -44,7 +44,7 @@ let startMs = 0, endMs = chart.durationMs;
 let session;
 let audioReady = false, isPlaying = false, hasStarted = false, ending = false, audioUrl = null;
 let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
-let lastMessage = '', lastMessageEn = null, lastFeedback = '', lastPlayText = '开始练习', lastKeyHelp = '点击键位，再按下新的按键', lastSavedAudioStatus = '音频仅保存在当前浏览器，不会上传。';
+let lastMessage = '', lastMessageEn = null, lastMessageJa = null, lastFeedback = '', lastPlayText = '开始练习', lastKeyHelp = '点击键位，再按下新的按键', lastSavedAudioStatus = '音频仅保存在当前浏览器，不会上传。';
 let seeking = false;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
 const held = new Set();
@@ -117,12 +117,12 @@ function formatCompletion(value) {
   const bounded = Math.max(0, Math.min(100, value));
   return (bounded >= 100 - 1e-8 ? 100 : Math.floor((bounded + 1e-9) * 10) / 10).toFixed(1);
 }
-function setMessage(text, good = false, timeout = 5000, english = null) {
+function setMessage(text, good = false, timeout = 5000, english = null, japanese = null) {
   clearTimeout(messageTimer);
-  lastMessage = text; lastMessageEn = english;
-  els.message.textContent = english === null ? translate(text) : tr(text, english);
+  lastMessage = text; lastMessageEn = english; lastMessageJa = japanese;
+  els.message.textContent = english === null ? translate(text) : tr(text, english, japanese ?? undefined);
   els.message.classList.toggle('success', good);
-  if (timeout) messageTimer = setTimeout(() => { lastMessage = ''; lastMessageEn = null; els.message.textContent = ''; }, timeout);
+  if (timeout) messageTimer = setTimeout(() => { lastMessage = ''; lastMessageEn = null; lastMessageJa = null; els.message.textContent = ''; }, timeout);
 }
 function flash(text, kind = 'hit') {
   clearTimeout(feedbackTimer);
@@ -460,7 +460,7 @@ function useDemo() {
 async function useSong(song = DEFAULT_SONG) {
   const selection = ++selectionId;
   stopAudio();
-  setMessage('正在加载《' + song.title + '》传说谱面…', true, 0, 'Loading the Legendary chart for ' + (song.titleEn || song.title) + '…');
+  setMessage('正在加载《' + song.title + '》传说谱面…', true, 0, 'Loading the Legendary chart for ' + (song.titleEn || song.title) + '…', (song.titleJa || song.titleEn || song.title) + 'のレジェンド譜面を読み込み中…');
   try {
     const response = await fetch(song.chartUrl);
     if (!response.ok) throw new Error('谱面文件未能加载');
@@ -507,7 +507,7 @@ async function useOnline() {
     mount.replaceChildren(player);
   }
   const label=$('onlineTrackLabel'), link=$('onlineLink');
-  if (label) label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong));
+  if (label) label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong), '公式サウンドトラック · ' + songName(currentSong));
   if (link) link.href='https://www.youtube.com/watch?v=' + encodeURIComponent(videoId) + '&t=' + Math.floor(startSeconds) + 's';
   if (!onlineAudio) {
     const player = new YouTubeAudio($('youtubePlayer'), (state, error) => {
@@ -899,10 +899,10 @@ window.addEventListener('romm:practice-visible',scheduleStageFrame);
 window.addEventListener('romm:language-changed',()=>{
   updateMeta(); renderKeys(); setPlayText(lastPlayText); setKeyHelp(lastKeyHelp);
   setSavedAudioStatus(lastSavedAudioStatus);
-  els.message.textContent=lastMessageEn === null ? translate(lastMessage) : tr(lastMessage,lastMessageEn); els.feedback.textContent=translate(lastFeedback);
+  els.message.textContent=lastMessageEn === null ? translate(lastMessage) : tr(lastMessage,lastMessageEn,lastMessageJa ?? undefined); els.feedback.textContent=translate(lastFeedback);
   els.songAudioStatus.textContent=translate(audioMode === 'online' ? '在线原声 · 同步待校准' : audioMode === 'metronome' ? '节拍伴奏 · 无歌曲原声' : '本地音频');
   const label=$('onlineTrackLabel');
-  if (label && sourceType === 'song') label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong));
+  if (label && sourceType === 'song') label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong), '公式サウンドトラック · ' + songName(currentSong));
 });
 window.addEventListener('keyup',event=>releaseInput('key:'+event.code));
 window.addEventListener('blur',()=>{ if (playPending) stopAudio(); if (isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); setMessage('窗口失去焦点，练习已暂停。'); } });
