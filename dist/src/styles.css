@@ -147,6 +147,8 @@ kbd { padding: 3px 5px; border: 1px solid #abaea9; border-radius: 3px; color: #e
 .combo-display span { font-size: 10px; margin-top: 3px; color: #e9e8de; }
 .stage-hint { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; text-shadow: 0 2px 8px #273642; pointer-events: none; transition: opacity .2s; }
 .stage-hint.hidden { opacity: 0; }
+.practice-countdown[hidden] { display:none; }
+.practice-countdown { position:absolute; z-index:5; left:50%; top:43%; transform:translate(-50%,-50%); pointer-events:none; color:#fff1cb; font-size:clamp(52px,8vw,88px); font-weight:700; line-height:1; text-shadow:0 2px 12px #172535,0 0 25px #e5c580aa; }
 .hint-diamond { color: #eedb9e; font-size: 17px; margin-bottom: 9px; }
 .stage-hint strong { color: #f3eee0; font-size: 17px; letter-spacing: .1em; }
 .stage-hint span:last-child { color: #d2d9d3; font-size: 11px; margin-top: 6px; }
@@ -361,6 +363,10 @@ body { min-width:0; }
 .tools-drawer .song-options label { color:#526068; }
 .tools-drawer .song-options label span { color:#899295; }
 .tools-drawer .song-options input { color:#4c5861; background:rgba(255,255,249,.55); border-color:rgba(100,109,110,.3); }
+.tools-drawer .song-options .remember-audio { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:11px; }
+.tools-drawer .song-options .remember-audio input { width:auto; margin:0; }
+.tools-drawer .song-options .forget-audio { margin:4px 0 8px; border:0; padding:0; background:transparent; color:#786444; text-decoration:underline; font-size:11px; }
+.forget-audio[hidden] { display:none; }
 @media (max-width:650px) {
   .stage-wrap[data-theme].with-player { width:calc(100% - 232px); }
   .online-panel { right:8px; width:218px; padding:8px; }
@@ -460,3 +466,32 @@ body { min-width:0; }
 .hit-window-label { margin-top:14px; }
 .setting-help { margin:3px 0 0; color:#899295; font-size:10px; }
 .feedback[data-kind="miss"] { color:#ffd1c1; text-shadow:0 0 9px rgba(255,142,118,.55),0 2px 4px #463638; }
+
+/* Touch lanes follow the same six centers as the canvas and support multi-touch. */
+.touch-controls { display:none; }
+.orientation-notice { display:none; }
+@media (pointer:coarse) and (orientation:portrait) and (max-width:900px) {
+  .orientation-notice { position:fixed; z-index:1000; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:#f5ecd9; background:linear-gradient(165deg,#1c1a2b,#41304e); font-family:"Microsoft YaHei",sans-serif; }
+  .orientation-notice span { font-size:60px; line-height:1; color:#e5d2a7; }
+  .orientation-notice strong { font-size:22px; letter-spacing:.1em; }
+  .orientation-notice small { color:#d4c9c8; font-size:14px; }
+}
+@media (pointer:coarse) and (orientation:landscape), (orientation:landscape) and (max-height:600px) {
+  .touch-controls { position:absolute; z-index:6; left:50%; bottom:30px; transform:translateX(-50%); width:min(78%,1050px); height:150px; display:grid; grid-template-columns:repeat(6,1fr); touch-action:none; }
+  .touch-controls button { min-width:0; border:0; border-radius:16px; background:transparent; touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; }
+  .touch-controls button:active { background:linear-gradient(0deg,rgba(239,225,181,.16),transparent); }
+}
+@media (orientation:landscape) and (max-height:600px) {
+  .game-frame,.app-shell { min-height:0; height:100vh; height:100dvh; }
+  .topbar { height:48px; padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); gap:8px; }
+  .brand { min-width:0; }.brand-copy,.brand-emblem { display:none; }
+  .top-transport { flex:1; gap:8px; }.timeline { display:block; flex:1 1 120px; min-width:75px; }
+  .play-button { min-width:88px; height:34px; }.reset-button { min-width:34px; width:34px; padding:0; font-size:0; }.reset-button span { font-size:20px; }
+  .header-actions { gap:6px; }.library-open { padding:7px 10px; font-size:12px; }.tools-label { display:none; }.tools-orb { width:30px; height:30px; }
+  .card-head { top:53px; left:16px; right:16px; }.track-heading h1 { font-size:13px; }.track-meta { font-size:10px; }.theme-picker { display:none; }
+  .completion-track { top:47px; }.stage-top { top:102px; left:16px; right:16px; }.performance-display strong { font-size:14px; }.performance-display em { font-size:11px; }
+  .combo-display { top:-43px; }.combo-display strong { font-size:24px; }.stage-status { font-size:10px; }.stage-mode { display:none; }
+  .under-stage,.stage-foot { display:none; }.stage-hint { top:39%; }.feedback { top:58%; }.message { bottom:8px; max-width:95%; font-size:11px; }
+  .tools-drawer { top:48px; right:8px; max-height:calc(100% - 54px); width:min(610px,calc(100vw - 16px)); }
+  .stage-wrap[data-theme].with-player { width:calc(100% - 190px); }.online-panel { top:90px; right:8px; width:175px; padding:6px; }.online-panel iframe { width:100%; height:100px; }.online-help { display:none; }
+}

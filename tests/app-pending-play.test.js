@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('leaving while online playback is connecting resets the button and restarts from the selected start', async () => {
+test('leaving while online playback is connecting resets the button and restarts from the selected start', async (t) => {
+  t.mock.timers.enable({apis:['setTimeout']});
   class FakeElement {
     constructor() {
       this.tagName='DIV'; this.textContent=''; this.children=[]; this.listeners={};
@@ -20,7 +21,7 @@ test('leaving while online playback is connecting resets the button and restarts
     getContext() { return {}; }
     getBoundingClientRect() { return {width:0,height:0}; }
   }
-  const ids=['stage','stageWrap','stageHint','feedback','message','playButton','playText','playIcon','restartButton',
+  const ids=['stage','stageWrap','stageHint','practiceCountdown','feedback','message','playButton','playText','playIcon','restartButton',
     'startRange','endRange','startOutput','endOutput','loopToggle','scrollSpeed','scrollLabel','offset','speedLabel',
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
@@ -40,7 +41,7 @@ test('leaving while online playback is connecting resets the button and restarts
   globalThis.requestAnimationFrame=()=>0;
   globalThis.location={origin:'http://localhost'};
   globalThis.Audio=class {
-    constructor(){this.listeners={};this.currentTime=0;this.duration=32;this.paused=true;}
+    constructor(){this.listeners={};this.currentTime=0;this.duration=120;this.paused=true;}
     addEventListener(name,fn){this.listeners[name]=fn;}
     load(){this.listeners.loadedmetadata?.();}
     pause(){this.paused=true;}
@@ -64,7 +65,7 @@ test('leaving while online playback is connecting resets the button and restarts
 
   for (const destination of ['romm:show-home','romm:library-open']) {
     el.restartButton.dispatch('click');
-    el.playButton.dispatch('click'); await flush();
+    el.playButton.dispatch('click'); t.mock.timers.tick(1000); t.mock.timers.tick(1000); t.mock.timers.tick(1000); await flush();
     assert.equal(el.playText.textContent,'正在连接…');
 
     emit(destination); await flush();
@@ -78,7 +79,7 @@ test('leaving while online playback is connecting resets the button and restarts
     // Moving the fake player away from the starting point makes a fresh seek observable.
     youtube.time=2592;
     const previousSeeks=youtube.seeks.length;
-    el.playButton.dispatch('click'); await flush();
+    el.playButton.dispatch('click'); t.mock.timers.tick(1000); t.mock.timers.tick(1000); t.mock.timers.tick(1000); await flush();
     assert.equal(youtube.seeks.length,previousSeeks+1);
     assert.equal(youtube.seeks.at(-1),2582);
     assert.equal(el.playText.textContent,'正在连接…');
@@ -86,4 +87,15 @@ test('leaving while online playback is connecting resets the button and restarts
     assert.equal(el.playText.textContent,'暂停');
     el.playButton.dispatch('click'); // Pause before testing the other destination.
   }
+  youtube.options.events.onError({data:100}); await flush();
+  assert.equal(el.songAudioStatus.textContent,'节拍伴奏 · 无歌曲原声');
+  assert.match(el.message.textContent,/已切换节拍伴奏/);
+
+  // An unreachable online player must not leave the song permanently loading.
+  window.YT.Player=class { pauseVideo(){} destroy(){} };
+  el.onlineButton.dispatch('click'); await flush();
+  assert.equal(el.songAudioStatus.textContent,'在线原声 · 同步待校准');
+  t.mock.timers.tick(8000); await flush();
+  assert.equal(el.songAudioStatus.textContent,'节拍伴奏 · 无歌曲原声');
+  assert.match(el.message.textContent,/已切换节拍伴奏/);
 });

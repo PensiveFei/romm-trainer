@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('pausing a held note keeps it valid while the key remains down', async () => {
+test('pausing a held note keeps it valid while the key remains down', async (t) => {
+  t.mock.timers.enable({apis:['setTimeout']});
   class FakeElement {
     constructor(id='') {
       this.id=id; this.tagName='DIV'; this.textContent=''; this.children=[]; this.listeners={};
@@ -20,14 +21,15 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     getContext() { return {}; }
     getBoundingClientRect() { return {width:0,height:0}; }
   }
-  const ids=['stage','stageWrap','stageHint','feedback','message','playButton','playText','playIcon','restartButton',
+  const ids=['stage','stageWrap','stageHint','practiceCountdown','feedback','message','playButton','playText','playIcon','restartButton',
     'startRange','endRange','startOutput','endOutput','loopToggle','scrollSpeed','scrollLabel','offset','speedLabel',
     'rateButtons','keyBindings','keyHelp','elapsed','duration','stageTime','progressFill','statHits','statCombo',
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
     'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
     'hitWindow','hitWindowLabel','songButton','songOptions','onlinePanel','songAudioStatus','musicStart',
-    'onlineButton','metronomeButton','youtubePlayer','youtubeMount','timelineSeek'];
+    'onlineButton','metronomeButton','youtubePlayer','youtubeMount','timelineSeek',
+    'touchLane0','touchLane1','touchLane2','touchLane3','touchLane4','touchLane5'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
   const listeners={};
@@ -58,6 +60,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(settings.get('romm-trainer-scroll'), '0.4');
   const press=(name,code)=>listeners[name].forEach(fn=>fn({code,repeat:false,target:document.body,preventDefault(){}}));
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
+  const begin=async()=>{ el.playButton.dispatch('click'); await flush(); t.mock.timers.tick(1000); t.mock.timers.tick(1000); t.mock.timers.tick(1000); await flush(); };
 
   el.toolsToggle.dispatch('click');
   assert.equal(el.toolsDrawer.hidden,false);
@@ -66,6 +69,19 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   el.toolsToggle.dispatch('click'); el.toolsClose.dispatch('click');
   assert.equal(el.toolsDrawer.hidden,true);
   el.playButton.dispatch('click'); await flush();
+  t.mock.timers.tick(1000);
+  el.playButton.dispatch('click'); await flush();
+  t.mock.timers.tick(10000); await flush();
+  assert.equal(testAudio.paused,true);
+  assert.equal(el.practiceCountdown.hidden,true);
+  assert.equal(el.playText.textContent,'开始练习');
+  el.playButton.dispatch('click'); await flush();
+  assert.equal(el.practiceCountdown.textContent,'3');
+  assert.equal(testAudio.paused,true);
+  t.mock.timers.tick(1000); assert.equal(el.practiceCountdown.textContent,'2');
+  t.mock.timers.tick(1000); assert.equal(el.practiceCountdown.textContent,'1');
+  t.mock.timers.tick(1000); await flush();
+  assert.equal(el.practiceCountdown.hidden,true);
   assert.equal(el.playText.textContent,'暂停');
   assert.equal(el.hitWindowLabel.textContent,'±180 ms');
   testAudio.currentTime=1.7; press('keydown','KeyA'); press('keyup','KeyA');
@@ -75,6 +91,13 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
   assert.equal(el.performanceScore.textContent,'20');
   assert.notEqual(el.completionValue.textContent,'(0.0%)');
+  el.playButton.dispatch('click');
+  el.playButton.dispatch('click'); await flush();
+  t.mock.timers.tick(1000);
+  el.playButton.dispatch('click'); await flush();
+  assert.equal(el.playText.textContent,'继续练习');
+  assert.equal(el.performanceScore.textContent,'20');
+  await begin();
   const completionBeforeTheme=el.completionValue.textContent;
   el.themeSelect.value='electro'; el.themeSelect.dispatch('change');
   assert.equal(el.stageWrap.dataset.theme,'electro');
@@ -96,7 +119,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.playText.textContent,'继续练习');
   const missesAtPause=Number(el.statMiss.textContent);
   assert.ok(missesAtPause>=missesBefore);
-  el.playButton.dispatch('click'); await flush();
+  await begin();
   assert.equal(el.toolsDrawer.hidden,true);
   testAudio.currentTime=11; press('keyup','KeyA');
   assert.equal(Number(el.statMiss.textContent),missesAtPause);
@@ -104,7 +127,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
 
   el.endRange.value='12'; el.endRange.dispatch('input');
   assert.equal(el.completionValue.textContent,'(0.0%)');
-  el.playButton.dispatch('click'); await flush();
+  await begin();
   testAudio.currentTime=2; press('keydown','KeyA'); press('keyup','KeyA');
   assert.notEqual(el.completionValue.textContent,'(0.0%)');
   testAudio.currentTime=12; nextFrame();
@@ -117,7 +140,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.hitWindowLabel.textContent,'±220 ms');
   el.hitWindow.dispatch('change');
   assert.equal(settings.get('romm-trainer-hit-window'),'220');
-  el.playButton.dispatch('click'); await flush();
+  await begin();
   testAudio.currentTime=1.8; press('keydown','KeyA'); press('keyup','KeyA');
   assert.equal(el.performanceScore.textContent,'10');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
@@ -131,10 +154,21 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
   el.playButton.dispatch('click');
   el.timelineSeek.value='8000';el.timelineSeek.dispatch('input');el.timelineSeek.dispatch('change');
-  el.playButton.dispatch('click');await flush();
+  await begin();
   assert.equal(testAudio.currentTime,8);
   press('keydown','ArrowLeft');
   assert.equal(testAudio.currentTime,0);
+
+  // Two independent fingers can hit a chord and sustain a hold until release.
+  const touch=(lane,name,pointerId)=>el['touchLane'+lane].dispatch(name,{pointerId,pointerType:'touch',button:0,preventDefault(){}});
+  testAudio.currentTime=7;
+  touch(0,'pointerdown',11); touch(5,'pointerdown',12);
+  assert.equal(el.statHits.children[0].textContent.trim(),'2');
+  touch(0,'pointerup',11); touch(5,'pointerup',12);
+  testAudio.currentTime=10;
+  touch(0,'pointerdown',13); touch(5,'pointerdown',14); touch(5,'pointerup',14);
+  testAudio.currentTime=11; touch(0,'pointerup',13);
+  assert.equal(el.statHits.children[0].textContent.trim(),'4');
 
   const song = JSON.parse(await readFile(new URL('../dist/data/surasthana-legend.json', import.meta.url), 'utf8'));
   globalThis.fetch = async () => ({ok:true, async json(){return song;}});
@@ -160,7 +194,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   el.endRange.value='6'; el.endRange.dispatch('input');
   el.musicStart.value='5.25'; el.musicStart.dispatch('change');
   assert.equal(youtube.time,2582+5.25);
-  el.playButton.dispatch('click'); await flush();
+  await begin();
   assert.equal(el.playText.textContent,'暂停');
   nextFrame();
   youtube.time=2582+5.25+4.405; press('keydown','KeyD');
@@ -184,7 +218,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   el.metronomeButton.dispatch('click');
   assert.equal(el.onlinePanel.hidden,true);
   assert.match(el.songAudioStatus.textContent,/节拍伴奏/);
-  el.playButton.dispatch('click'); await flush();
+  await begin();
   assert.equal(el.playText.textContent,'暂停');
   assert.equal(testAudio.paused,false);
 });

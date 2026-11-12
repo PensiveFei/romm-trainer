@@ -2,10 +2,11 @@ import { demoChart, validateChart, validateRange } from './chart.js';
 import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
+import { localAudioStore } from './local-audio.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  stage: $('stage'), wrap: $('stageWrap'), hint: $('stageHint'), feedback: $('feedback'), message: $('message'),
+  stage: $('stage'), wrap: $('stageWrap'), hint: $('stageHint'), countdown: $('practiceCountdown'), feedback: $('feedback'), message: $('message'),
   play: $('playButton'), playText: $('playText'), playIcon: $('playIcon'), restart: $('restartButton'),
   start: $('startRange'), end: $('endRange'), startOut: $('startOutput'), endOut: $('endOutput'), loop: $('loopToggle'),
   scroll: $('scrollSpeed'), scrollLabel: $('scrollLabel'), offset: $('offset'), speedLabel: $('speedLabel'),
@@ -18,16 +19,19 @@ const els = {
   sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect'),
   drawer: $('toolsDrawer'), drawerToggle: $('toolsToggle'), drawerClose: $('toolsClose'),
   songOptions: $('songOptions'), onlinePanel: $('onlinePanel'), songAudioStatus: $('songAudioStatus'),
-  musicStart: $('musicStart'), onlineButton: $('onlineButton'), metronomeButton: $('metronomeButton')
+  musicStart: $('musicStart'), onlineButton: $('onlineButton'), metronomeButton: $('metronomeButton'),
+  rememberAudio: $('rememberAudio'), savedAudioStatus: $('savedAudioStatus'), forgetAudio: $('forgetAudio')
 };
 const localAudio = new Audio();
 localAudio.preload = 'metadata';
 localAudio.preservesPitch = true;
 let audio = localAudio, onlineAudio = null, audioMode = 'demo', musicStart = 0;
 let selectionId = 0, playId = 0, playPending = false;
+let countdownTimer = null, finishCountdown = null, playWasResume = false;
+let localUnlock = null;
 let chart = demoChart;
 let sourceType = 'demo';
-const DEFAULT_SONG = {title:'净善的遐歌',chartUrl:'./data/surasthana-legend.json',levels:[1,2,5,6],audio:{videoId:'2SvpviExw1o',startSeconds:2582,durationSeconds:141}};
+const DEFAULT_SONG = {id:'_GMusic16',title:'净善的遐歌',chartUrl:'./data/surasthana-legend.json',levels:[1,2,5,6],audio:{videoId:'2SvpviExw1o',startSeconds:2582,durationSeconds:141}};
 let currentSong = DEFAULT_SONG;
 let rate = 1;
 let scrollRate = 1;
@@ -40,6 +44,7 @@ let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
 let seeking = false;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
 const held = new Set();
+const activeInputs = new Map();
 let themeId = 'base', currentTheme = getTheme(themeId);
 const hitEffects = [];
 const canvas = els.stage;
@@ -76,7 +81,7 @@ function applyTheme(id, save = true) {
 function setDrawerOpen(open) {
   const wasOpen = !els.drawer.hidden;
   if (open && isPlaying) pause();
-  if (open && playPending) { stopAudio(); hasStarted = false; els.playText.textContent = '开始练习'; }
+  if (open && playPending) stopAudio();
   if (!open && bindingIndex !== -1) {
     bindingIndex = -1;
     els.keyHelp.textContent = '已取消修改';
@@ -187,7 +192,7 @@ function seekPractice(requestedMs) {
   if (!Number.isFinite(target)) {updateTime(previewMs);return;}
   if (playPending) stopAudio();
   try {seekSong(target);} catch {updateTime(previewMs);setMessage('当前音源暂时无法跳转，请稍后重试。');return;}
-  held.clear();hitEffects.length=0;ending=false;
+  held.clear();activeInputs.clear();hitEffects.length=0;ending=false;
   session=new Judge(chart,target,endMs,rate,offset,hitWindowMs);
   previewMs=target;hasStarted=true;
   updateStats();updateTime(target);
@@ -209,7 +214,7 @@ function checkRange(show = false) {
 }
 function releaseHeldAt(ms) {
   for (const lane of held) session.release(lane,ms);
-  held.clear();
+  held.clear(); activeInputs.clear();
 }
 function pause() {
   if (!isPlaying) return;
@@ -222,7 +227,7 @@ function pause() {
 function resetSession() {
   if (isPlaying) pause();
   if (playPending) stopAudio();
-  held.clear(); hitEffects.length = 0; ending = false; hasStarted = false;
+  held.clear(); activeInputs.clear(); hitEffects.length = 0; ending = false; hasStarted = false;
   session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
   previewMs = Math.max(0,startMs - 2000);
   if (audioReady) {
@@ -240,6 +245,7 @@ async function play() {
     setMessage('音频从所选起点开始的剩余时长不足，请调整音源起点或更换音频。', false, 0); return;
   }
   setDrawerOpen(false);
+  playWasResume = hasStarted;
   if (!hasStarted) {
     session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
     seekSong(Math.max(0,startMs - 2000));
@@ -248,10 +254,44 @@ async function play() {
   audio.playbackRate = rate;
   const activeAudio = audio, activePlay = ++playId;
   playPending = true;
-  if (audioMode === 'online') { els.playText.textContent = '正在连接…'; setMessage('正在加载官方在线音源，首次播放可能需要一些时间。', true, 0); }
+  els.hint.classList.add('hidden');
+  els.playText.textContent = '取消倒计时';
+  els.playIcon.textContent = 'Ⅱ';
   try {
+    // Start the local media element during the user's gesture. iOS can reject
+    // a first play() invoked only after the countdown's timer has elapsed.
+    if (activeAudio === localAudio) {
+      const position=activeAudio.currentTime;
+      localUnlock={player:activeAudio,muted:activeAudio.muted};
+      activeAudio.muted=true;
+      await activeAudio.play();
+      if (activeAudio !== audio || activePlay !== playId) return;
+      activeAudio.pause();
+      activeAudio.currentTime=position;
+      activeAudio.muted=localUnlock.muted;
+      localUnlock=null;
+    }
+    const completed = await new Promise(resolve => {
+      finishCountdown = resolve;
+      let remaining = 3;
+      els.countdown.hidden = false;
+      els.countdown.textContent = String(remaining);
+      const tick = () => {
+        if (--remaining > 0) {
+          els.countdown.textContent = String(remaining);
+          countdownTimer = setTimeout(tick, 1000);
+        } else {
+          countdownTimer = null; finishCountdown = null;
+          els.countdown.hidden = true;
+          resolve(true);
+        }
+      };
+      countdownTimer = setTimeout(tick, 1000);
+    });
+    if (!completed || activeAudio !== audio || activePlay !== playId) return;
+    if (audioMode === 'online') { els.playText.textContent = '正在连接…'; setMessage('正在加载官方在线音源，首次播放可能需要一些时间。', true, 0); }
     await activeAudio.play();
-    if (activeAudio !== audio || activePlay !== playId) { activeAudio.pause(); return; }
+    if (activeAudio !== audio || activePlay !== playId) { if (activeAudio !== audio) activeAudio.pause(); return; }
     isPlaying = true; ending = false;
     els.hint.classList.add('hidden');
     els.playText.textContent = '暂停'; els.playIcon.textContent = 'Ⅱ';
@@ -261,11 +301,20 @@ async function play() {
     if (activeAudio === audio && activePlay === playId) {
       isPlaying = false; hasStarted = false;
       els.playText.textContent = '开始练习'; els.playIcon.textContent = '▶';
-      setMessage(audioMode === 'online' ? '在线音源暂不可用，请检查网络或在设置中切换节拍伴奏 / 本地音频。' : '音频无法播放，请检查本地音频文件或浏览器设置。', false, 0);
+      if (audioMode === 'online') {
+        discardOnline(activeAudio);
+        useMetronome();
+        setMessage('在线原声播放失败，已切换节拍伴奏；可选择本地音频随原曲练习。',false,0);
+      } else setMessage('音频无法播放，请检查本地音频文件或浏览器设置。', false, 0);
     }
-  } finally { if (activePlay === playId) playPending = false; }
+  } finally {
+    if (activePlay === playId) {
+      if (localUnlock) { localUnlock.player.muted=localUnlock.muted; localUnlock=null; }
+      playPending = false;
+    }
+  }
 }
-function togglePlay() { if (isPlaying) pause(); else void play(); }
+function togglePlay() { if (playPending) stopAudio(); else if (isPlaying) pause(); else void play(); }
 function completePass() {
   if (ending) return;
   ending = true;
@@ -277,7 +326,7 @@ function completePass() {
   if (els.loop.checked && isPlaying) {
     const hitCount = session.hits, total = session.states.length, completion = formatCompletion(session.completion);
     session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
-    held.clear();
+    held.clear(); activeInputs.clear();
     seekSong(Math.max(0,startMs - 2000));
     if (audio.paused) void audio.play().catch(() => { isPlaying = false; setMessage('请点击继续练习。'); });
     setMessage('上一轮：完成度 ' + completion + '%，命中 ' + hitCount + ' / ' + total + '。继续练习。', true);
@@ -300,8 +349,13 @@ function stopAudio() {
   if (isPlaying) pause();
   const wasPending = playPending;
   playId++; playPending = false;
+  if (countdownTimer !== null) clearTimeout(countdownTimer);
+  countdownTimer = null;
+  if (finishCountdown) { const finish = finishCountdown; finishCountdown = null; finish(false); }
+  els.countdown.hidden = true;
   audio.pause();
-  if (wasPending) { hasStarted=false; els.playText.textContent='开始练习'; els.playIcon.textContent='▶'; }
+  if (localUnlock) { localUnlock.player.muted=localUnlock.muted; localUnlock=null; }
+  if (wasPending) { hasStarted=playWasResume; els.playText.textContent=hasStarted?'继续练习':'开始练习'; els.playIcon.textContent='▶'; if (!hasStarted) els.hint.classList.remove('hidden'); }
 }
 function replaceAudio(url, mode = 'local') {
   stopAudio();
@@ -378,10 +432,28 @@ async function useSong(song = DEFAULT_SONG) {
     chart = parsed; sourceType = 'song'; startMs = 0; endMs = chart.durationMs; musicStart = 0;
     audioReady = false;
     updateMeta(); refreshRangeUi(); resetSession();
+    if (els.forgetAudio) els.forgetAudio.hidden=true;
+    if (els.savedAudioStatus) els.savedAudioStatus.textContent='音频仅保存在当前浏览器，不会上传。';
+    let savedFile = null;
+    try { savedFile = await localAudioStore.get(song.id || song.chartUrl); } catch { /* Local storage may be unavailable. */ }
+    if (selection !== selectionId) return;
+    if (savedFile instanceof Blob) {
+      replaceAudio(URL.createObjectURL(savedFile));
+      if (els.forgetAudio) els.forgetAudio.hidden=false;
+      if (els.savedAudioStatus) els.savedAudioStatus.textContent='已载入本设备保存的音频：' + (savedFile.name || '本地音频');
+      setMessage('已载入本设备保存的音频，可以直接练习。',true);
+      return;
+    }
     if (currentSong.audio) await useOnline(); else useMetronome();
   } catch (error) {
     if (selection === selectionId) setMessage('曲谱加载失败：' + (error instanceof Error ? error.message : '请重试'), false, 0);
   }
+}
+function discardOnline(player) {
+  player.destroy();
+  if (onlineAudio === player) onlineAudio = null;
+  const mount=$('youtubeMount'), replacement=document.createElement('div');
+  replacement.id='youtubePlayer'; mount.replaceChildren(replacement);
 }
 async function useOnline() {
   if (sourceType !== 'song' || !currentSong?.audio) return;
@@ -407,8 +479,9 @@ async function useOnline() {
       } else if (state === 0 && isPlaying) completePass();
       else if (state === 'error') {
         if (isPlaying) pause();
-        audioReady = false;
-        setMessage(error?.message + '，可切换节拍伴奏或本地音频。', false, 0);
+        discardOnline(player);
+        useMetronome();
+        setMessage((error?.message || '在线原声不可用') + '，已切换节拍伴奏；可选择本地音频随原曲练习。', false, 0);
       } else if (state === 1 && !isPlaying && !playPending) player.pause();
     }, {videoId,trackStartSeconds:startSeconds});
     onlineAudio = player;
@@ -418,15 +491,20 @@ async function useOnline() {
   setAudioMode('online');
   resetSession();
   setMessage('正在准备官方在线音源，也可在设置中选择节拍伴奏。', true, 0);
+  let timeout;
   try {
-    await activeOnline.ready;
+    await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),8000);})]);
     if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
     resetSession();
     setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
   } catch {
-    if (audio === activeOnline && sourceType === 'song') setMessage('在线播放器加载失败，请检查网络或切换节拍伴奏 / 本地音频。', false, 0);
-  }
+    if (audio === activeOnline && sourceType === 'song') {
+      discardOnline(activeOnline);
+      useMetronome();
+      setMessage('在线原声暂不可用，已切换节拍伴奏；可选择本地音频随原曲练习。',false,0);
+    }
+  } finally { clearTimeout(timeout); }
 }
 function useMetronome() {
   if (sourceType !== 'song') return;
@@ -569,10 +647,12 @@ function renderStage(songMs) {
     ctx.beginPath();ctx.arc(x,hitY,9,0,Math.PI*2);
     ctx.fillStyle=held.has(lane)?currentTheme.accent:'#f0eee5';ctx.fill();
     ctx.restore();
-    const keyWidth=Math.min(25,laneWidth*.55);
-    ctx.fillStyle='rgba(247,246,239,.94)';roundRect(x-keyWidth/2,hitY+27,keyWidth,23,3);ctx.fill();
-    ctx.fillStyle='#2b3340';ctx.font='700 12px "Microsoft YaHei",sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(keyLabel(keys[lane]),x,hitY+39);
+    if (!window.matchMedia?.('(pointer: coarse)').matches) {
+      const keyWidth=Math.min(25,laneWidth*.55);
+      ctx.fillStyle='rgba(247,246,239,.94)';roundRect(x-keyWidth/2,hitY+27,keyWidth,23,3);ctx.fill();
+      ctx.fillStyle='#2b3340';ctx.font='700 12px "Microsoft YaHei",sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(keyLabel(keys[lane]),x,hitY+39);
+    }
   }
   ctx.restore();
 }
@@ -646,9 +726,90 @@ els.musicStart.addEventListener('change',()=>{
 els.chartFile.addEventListener('change',async()=>{ await importChart(els.chartFile.files[0]); els.chartFile.value=''; });
 els.audioFile.addEventListener('change',()=>{
   const file=els.audioFile.files[0];
-  if (file) { replaceAudio(URL.createObjectURL(file)); setMessage('正在读取本地音频…',true,0); }
+  if (file) {
+    const selectedSong=sourceType === 'song' ? currentSong : null;
+    const selectedId=selectionId;
+    const url=URL.createObjectURL(file), expectedDuration=chart.durationMs;
+    if (selectedSong && els.rememberAudio?.checked) {
+      const cleanup=()=>{localAudio.removeEventListener('loadedmetadata',loaded); localAudio.removeEventListener('error',failed);};
+      const isCurrent=()=>audio === localAudio && localAudio.src === url && selectionId === selectedId && currentSong === selectedSong;
+      const loaded=async()=>{
+        cleanup();
+        if (!isCurrent()) return;
+        if (!Number.isFinite(localAudio.duration) || localAudio.duration * 1000 + 50 < expectedDuration) {
+          if (els.savedAudioStatus) els.savedAudioStatus.textContent='音频短于谱面，未保存到本设备。';
+          return;
+        }
+        try {
+          await localAudioStore.put(selectedSong.id || selectedSong.chartUrl,file);
+          if (isCurrent()) {
+            if (els.savedAudioStatus) els.savedAudioStatus.textContent='已保存在本设备：' + file.name;
+            if (els.forgetAudio) els.forgetAudio.hidden=false;
+          }
+        } catch { if (isCurrent() && els.savedAudioStatus) els.savedAudioStatus.textContent='本次可播放，但未能保存到本设备。'; }
+      };
+      const failed=()=>{cleanup(); if (isCurrent() && els.savedAudioStatus) els.savedAudioStatus.textContent='音频无法读取，未保存到本设备。';};
+      localAudio.addEventListener('loadedmetadata',loaded);
+      localAudio.addEventListener('error',failed);
+    }
+    replaceAudio(url); setMessage('正在读取本地音频…',true,0);
+  }
   els.audioFile.value='';
 });
+els.forgetAudio?.addEventListener('click',async()=>{
+  if (sourceType !== 'song') return;
+  const song=currentSong, selectedId=selectionId;
+  try {
+    await localAudioStore.remove(song.id || song.chartUrl);
+    if (selectionId !== selectedId || currentSong !== song) return;
+    els.forgetAudio.hidden=true;
+    els.savedAudioStatus.textContent='已删除保存的音频；当前已载入的音频仍可播放。';
+  } catch { setMessage('未能删除本地音频，请稍后重试。',false); }
+});
+function pressLane(lane, inputId) {
+  if (!isPlaying || activeInputs.has(inputId)) return;
+  activeInputs.set(inputId,lane);
+  if (held.has(lane)) return;
+  held.add(lane);
+  const songMs=songTime();
+  const note=session.press(lane,songMs);
+  hitEffects.push({ lane, started:performance.now(), unmatched:!note });
+  if (hitEffects.length > 24) hitEffects.shift();
+  if (note) {
+    const e=Math.round(note.errorMs);
+    flash(note.grade === 'precise' ? '准确' : (e < 0 ? '偏早 ' : '偏晚 ') + Math.abs(e) + ' ms');
+  } else {
+    const error=session.timingHint(lane,songMs);
+    flash(error === null ? '未命中' : '未命中 · ' + (error < 0 ? '过早 ' : '过晚 ') + Math.round(Math.abs(error)) + ' ms','miss');
+  }
+  updateStats();
+}
+function releaseInput(inputId) {
+  const lane=activeInputs.get(inputId);
+  if (lane === undefined) return;
+  activeInputs.delete(inputId);
+  if ([...activeInputs.values()].includes(lane)) return;
+  if (held.delete(lane)) {
+    const note=session.release(lane,isPlaying ? songTime() : previewMs);
+    if (note && note.status === 'miss') flash('长按提前松开','miss');
+    updateStats();
+  }
+}
+for (let lane=0; lane<6; lane++) {
+  const button=$('touchLane'+lane);
+  if (!button) continue;
+  button.addEventListener('pointerdown', event => {
+    if (!isPlaying || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    event.preventDefault();
+    pressLane(lane,'pointer:'+event.pointerId);
+    try { button.setPointerCapture(event.pointerId); } catch { /* Older browsers may not support capture. */ }
+  });
+  const release = event => { event.preventDefault(); releaseInput('pointer:'+event.pointerId); };
+  button.addEventListener('pointerup',release);
+  button.addEventListener('pointercancel',release);
+  button.addEventListener('lostpointercapture',release);
+  button.addEventListener('contextmenu',event=>event.preventDefault());
+}
 window.addEventListener('keydown',(event) => {
   if ($('libraryView')?.hidden === false) return;
   if ($('homeView')?.hidden === false && els.drawer.hidden) return;
@@ -669,38 +830,16 @@ window.addEventListener('keydown',(event) => {
   const lane=keys.indexOf(event.code);
   if (lane < 0 || event.repeat || !isPlaying) return;
   event.preventDefault();
-  if (held.has(lane)) return;
-  held.add(lane);
-  const songMs=songTime();
-  const note=session.press(lane,songMs);
-  hitEffects.push({ lane, started:performance.now(), unmatched:!note });
-  if (hitEffects.length > 24) hitEffects.shift();
-  if (note) {
-    const e=Math.round(note.errorMs);
-    flash(note.grade === 'precise' ? '准确' : (e < 0 ? '偏早 ' : '偏晚 ') + Math.abs(e) + ' ms');
-  } else {
-    const error=session.timingHint(lane,songMs);
-    flash(error === null ? '未命中' : '未命中 · ' + (error < 0 ? '过早 ' : '过晚 ') + Math.round(Math.abs(error)) + ' ms','miss');
-  }
-  updateStats();
+  pressLane(lane,'key:'+event.code);
 });
 window.addEventListener('romm:library-open',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
 window.addEventListener('romm:select-song',event=>{ if (event.detail?.status === 'ready' && event.detail.chartUrl) void useSong(event.detail); });
 window.addEventListener('romm:show-home',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
 window.addEventListener('romm:home-demo',useDemo);
 window.addEventListener('romm:open-settings',()=>{ setDrawerOpen(true); els.drawerClose.focus(); });
-window.addEventListener('keyup',(event)=>{
-  const lane=keys.indexOf(event.code);
-  if (lane < 0) return;
-  if (held.has(lane)) {
-    held.delete(lane);
-    const note=session.release(lane,isPlaying ? songTime() : previewMs);
-    if (note && note.status === 'miss') flash('长按提前松开','miss');
-    updateStats();
-  }
-});
-window.addEventListener('blur',()=>{ if (isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); setMessage('窗口失去焦点，练习已暂停。'); } });
-document.addEventListener('visibilitychange',()=>{ if (document.hidden && isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); } });
+window.addEventListener('keyup',event=>releaseInput('key:'+event.code));
+window.addEventListener('blur',()=>{ if (playPending) stopAudio(); if (isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); setMessage('窗口失去焦点，练习已暂停。'); } });
+document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); } });
 
 renderKeys(); updateMeta(); refreshRangeUi(); updateStats(); updateTime(0);
 replaceAudio(makeDemoAudio(), 'demo');

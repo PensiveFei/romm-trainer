@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#20283a">
   <title>千音习谱 | ROMM-Trainer</title>
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
@@ -63,6 +63,10 @@
               <div class="stage-status"><span class="stage-mode">垂直模式</span><span id="stageTime">00:00 / 00:32</span></div>
             </div>
             <div id="stageHint" class="stage-hint"><span class="hint-diamond">✦</span><strong>准备演奏</strong><span>点击上方播放键开始练习</span></div>
+            <div id="practiceCountdown" class="practice-countdown" role="status" aria-live="polite" hidden></div>
+            <div class="touch-controls" aria-label="触屏演奏区">
+              <button id="touchLane0" type="button" aria-label="第 1 轨"></button><button id="touchLane1" type="button" aria-label="第 2 轨"></button><button id="touchLane2" type="button" aria-label="第 3 轨"></button><button id="touchLane3" type="button" aria-label="第 4 轨"></button><button id="touchLane4" type="button" aria-label="第 5 轨"></button><button id="touchLane5" type="button" aria-label="第 6 轨"></button>
+            </div>
             <div id="feedback" class="feedback" aria-live="polite"></div>
             <div class="stage-foot"><span>Space 暂停 / 继续</span><span>手动练习 · 非官方项目</span></div>
           </div>
@@ -121,6 +125,9 @@
             <button id="metronomeButton" type="button">节拍伴奏</button>
           </div>
           <p id="songAudioStatus">在线原声加载中…</p>
+          <label class="remember-audio"><input id="rememberAudio" type="checkbox" checked> 将所选本地音频保存在本设备</label>
+          <p id="savedAudioStatus">音频仅保存在当前浏览器，不会上传。</p>
+          <button id="forgetAudio" class="forget-audio" type="button" hidden>删除此曲目的本地音频</button>
           <label for="musicStart">音源起点 <span>秒</span></label>
           <input id="musicStart" type="number" min="0" max="120" step="0.05" value="0" aria-describedby="musicStartHelp">
           <p id="musicStartHelp">调整原声或本地音频的起点，使其与谱面配合；节拍伴奏无需调整。</p>
@@ -153,6 +160,7 @@
       </div>
     </div>
   </div>
+  <div class="orientation-notice" role="status"><span aria-hidden="true">↻</span><strong>请横屏体验</strong><small>将手机旋转，即可使用触屏演奏</small></div>
   <main id="homeView" class="home-view" aria-label="千音习谱首页">
     <header class="home-header">
       <div class="home-brand"><span class="home-emblem" aria-hidden="true">♫</span><div><strong>千音习谱</strong><small>练习模式</small></div></div>

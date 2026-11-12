@@ -14,7 +14,8 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 ## 核心功能
 
-- **PC 手动练习**：六键键盘操作，支持单点、同时按和长按，并可自定义键位。
+- **手动练习**：PC 使用六键键盘，手机横屏后可使用六轨触屏，支持单点、同时按和长按。
+- **开始倒计时**：开始或继续练习前显示 3 秒倒计时，可随时取消。
 - **片段循环**：选择 A–B 区间反复练习，每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键快退、快进 10 秒；跳转后本轮完成度从当前位置重新计算。
 - **练习设置**：调整音乐播放速度、音符下落速度、判定范围和时间偏移。
@@ -23,11 +24,12 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **首页与收藏**：从精选曲目或专辑进入练习，在曲目详情中收藏歌曲；收藏仅保存在当前浏览器中。
 - **本地谱面**：提供原创示范谱，也可导入自行准备的 JSON 谱面和配套音频。
 - **曲目典藏**：按专辑浏览或搜索 150 首曲目；其中 128 首提供通过结构检查的传说难度六轨试验谱，另外 22 首暂待补充或核对。
-- **伴奏选择**：部分曲目提供官方在线原声入口；也可使用节拍伴奏或自行选择本地音频。在线原声与游戏内剪辑的同步仍待逐首校准。
+- **伴奏选择**：部分曲目提供官方在线原声入口；在线音源不可用时自动切换节拍伴奏。也可选择本地配套音频并保存在当前设备，下次选曲自动载入；本项目不会上传音频。节拍伴奏不包含歌曲原声，在线原声与游戏内剪辑的同步仍待逐首校准。
 
 ## Core Features
 
-- **Manual PC practice**: Play six lanes with configurable keyboard bindings, including taps, simultaneous notes, and holds.
+- **Manual practice**: Use six keyboard lanes on PC or touch the lanes in landscape on mobile, including taps, simultaneous notes, and holds.
+- **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
 - **Section looping**: Select an A–B section and repeat it with a short lead-in before each attempt.
 - **Practice settings**: Adjust the music playback rate, note scroll speed, hit window, and timing offset independently.
 - **Score themes**: Choose from eight themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
@@ -35,7 +37,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
 - **Song library**: Browse or search 150 titles by album, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
-- **Accompaniment**: Some songs link to an official online soundtrack; a metronome or user-selected local audio is also available. Alignment with each in-game edit remains provisional.
+- **Accompaniment**: Some songs link to an official online soundtrack; unavailable online audio falls back to a metronome. User-selected local audio can be saved in the current browser and loaded again for that song without uploading it. The metronome does not contain the soundtrack; alignment with each in-game edit remains provisional.
 
 ## 声明
 
