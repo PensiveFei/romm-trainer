@@ -1,4 +1,4 @@
-import { demoChart, validateChart, validateRange } from './chart.js';
+import { demoChart, validateChart, validateRange, resolveChartUrl } from './chart.js';
 import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 import { isReferenceTheme, paintReferenceNote, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
@@ -383,6 +383,26 @@ function resetSession() {
   updateStats(); updateTime(previewMs);
   scheduleStageFrame();
 }
+function updateRateUi() {
+  els.speedLabel.textContent=rate.toFixed(2)+'×';
+  for (const button of els.rateButtons.querySelectorAll('button')) {
+    const selected=Number(button.dataset.rate)===rate;
+    button.classList.toggle('selected',selected);
+    button.setAttribute('aria-pressed',String(selected));
+  }
+}
+function syncOnlinePlaybackRate(player,actual) {
+  if (audio !== player || audioMode !== 'online' || sourceType !== 'song' ||
+      !Number.isFinite(actual) || actual <= 0 || Math.abs(actual-rate) < 1e-6) return false;
+  rate=actual;
+  updateRateUi();
+  resetSession();
+  const speed=rate.toFixed(2)+'×';
+  setMessage(`在线音源实际速度为 ${speed}，已重置练习。`,false,0,
+    `Online audio is playing at ${speed}. Practice has been reset.`,
+    `オンライン音源の実際の速度は ${speed} です。練習を最初からやり直します。`);
+  return true;
+}
 async function play() {
   if (playPending) return;
   if (!checkRange(true)) return;
@@ -438,6 +458,7 @@ async function play() {
     if (audioMode === 'online') { setPlayText('正在连接…'); setMessage('正在加载官方在线音源，首次播放可能需要一些时间。', true, 0); }
     await activeAudio.play();
     if (activeAudio !== audio || activePlay !== playId) { if (activeAudio !== audio) activeAudio.pause(); return; }
+    if (activeAudio === onlineAudio && syncOnlinePlaybackRate(activeAudio,activeAudio.actualPlaybackRate)) return;
     isPlaying = true; ending = false;
     scheduleStageFrame();
     els.hint.classList.add('hidden');
@@ -584,7 +605,7 @@ async function useSong(song = DEFAULT_SONG) {
   stopAudio();
   setMessage('正在加载《' + song.title + '》传说谱面…', true, 0, 'Loading the Legendary chart for ' + (song.titleEn || song.title) + '…', (song.titleJa || song.titleEn || song.title) + 'のレジェンド譜面を読み込み中…');
   try {
-    const response = await fetch(song.chartUrl);
+    const response = await fetch(resolveChartUrl(song.chartUrl));
     if (!response.ok) throw new Error('谱面文件未能加载');
     const parsed = validateChart(await response.json());
     if (selection !== selectionId) return;
@@ -635,7 +656,9 @@ async function useOnline() {
   if (!onlineAudio) {
     const player = new YouTubeAudio($('youtubePlayer'), (state, error) => {
       if (audio !== player || sourceType !== 'song') return;
-      if (state === 2 && isPlaying) {
+      if (state === 'ratechange') {
+        syncOnlinePlaybackRate(player,error);
+      } else if (state === 2 && isPlaying) {
         pause(); setMessage('在线播放器已暂停，请使用上方按钮继续。');
       } else if (state === 0 && isPlaying) completePass();
       else if (state === 'error') {
@@ -926,8 +949,7 @@ els.rateButtons.addEventListener('click',(event) => {
   const target=event.target.closest('button[data-rate]');
   if (!target) return;
   rate=Number(target.dataset.rate); audio.playbackRate=rate;
-  els.speedLabel.textContent=rate.toFixed(2)+'×';
-  for (const b of els.rateButtons.querySelectorAll('button')) b.classList.toggle('selected',b===target);
+  updateRateUi();
   resetSession();
 });
 $('chartButton').addEventListener('click',()=>els.chartFile.click());

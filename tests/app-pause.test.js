@@ -245,6 +245,17 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   assert.equal(el.statHits.children[1].textContent,'/ 231');
   assert.equal(el.onlinePanel.hidden,false);
   assert.match(el.songAudioStatus.textContent,/同步待校准/);
+  youtube.getPlaybackRate=()=>1;
+  el.rateButtons.dispatch('click',{target:{closest:()=>({dataset:{rate:'0.5'}})}});
+  await begin();
+  assert.equal(el.playText.textContent,'开始练习','unsupported online rates reset instead of judging at the wrong speed');
+  assert.equal(el.speedLabel.textContent,'1.00×');
+  assert.match(el.message.textContent,/实际速度为 1\.00×/);
+  youtube.getPlaybackRate=()=>youtube.rate;
+  youtube.rate=.75; youtube.options.events.onPlaybackRateChange({data:.75});
+  assert.equal(el.speedLabel.textContent,'0.75×');
+  youtube.rate=1; youtube.options.events.onPlaybackRateChange({data:1});
+  assert.equal(el.speedLabel.textContent,'1.00×');
   el.endRange.value='6'; el.endRange.dispatch('input');
   el.musicStart.value='5.25'; el.musicStart.dispatch('change');
   assert.equal(youtube.time,2582+5.25);

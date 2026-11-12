@@ -13,6 +13,14 @@ const rawDemo = [
   [28000,0,1500],[28000,5,1500]
 ];
 
+// Keep the chart revision aligned with the versioned app and catalog.
+export function resolveChartUrl(path, moduleUrl = import.meta.url) {
+  const module = new URL(moduleUrl), base = new URL('../',module);
+  const url = new URL(path,base), version = module.searchParams.get('v');
+  if (version && url.origin === base.origin) url.searchParams.set('v',version);
+  return url.href;
+}
+
 export function validateChart(value) {
   if (!value || typeof value !== 'object' || value.version !== 1) throw new Error('谱面版本应为 1。');
   if (value.laneCount !== 6) throw new Error('当前版本仅支持六键谱面。');

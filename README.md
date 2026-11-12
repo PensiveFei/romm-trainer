@@ -34,6 +34,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **片段循环**：设置 A–B 练习区间，循环默认关闭，可手动开启；每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键、手机快捷按钮快退或快进 10 秒；手机也可从当前位置设置 A、B 点。跳转后本轮完成度从当前位置重新计算。
 - **练习设置**：调整音乐播放速度、练习音量、音符下落速度、判定范围、时间偏移和按键音量。手动按键时可听到合成琴音，音量设为零即可关闭。
+- **在线音源倍速**：如果播放器未能采用所选速度，或在播放器内更改了速度，会显示实际速度并重新开始练习，避免判定使用错误的速度。
 - **谱面主题**：切换十六种主题，各有独立的背景、音符与手动命中特效；选择会保存在本机。
 - **练习反馈**：查看实时完成度、命中、连击、漏击及偏早或偏晚；完成一轮后查看结果，同一谱面版本、区间和设置的最佳成绩保存在当前浏览器。
 - **首页与收藏**：从精选曲目或专辑进入练习，在曲目详情中收藏歌曲；收藏仅保存在当前浏览器中。
@@ -50,6 +51,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
 - **Seeking**: Drag the timeline or use the arrow keys or mobile buttons to seek by ten seconds. Mobile controls can also set A and B from the current position; seeking restarts scoring from that position.
 - **Practice settings**: Adjust playback rate, practice audio volume, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.
+- **Online playback speed**: If the player does not apply the selected rate, or its rate changes in the player, the actual rate is shown and practice restarts so timing uses the correct speed.
 - **Score themes**: Choose from sixteen themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live completion, hits, combo, misses, and early or late timing, then review each finished attempt. Personal bests are saved in the current browser separately for each chart version, section, and set of practice settings.
 - **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
@@ -104,9 +106,9 @@ The production site is served as static files by Cloudflare Pages; DNS and TLS a
 | Build command | `npm run build` |
 | Build output directory | `build` |
 
-`npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并根据脚本、样式和曲库目录的内容生成版本号。这一步用于避免缓存导致页面、脚本与曲库数据错配。
+`npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并根据脚本、样式、曲库目录和谱面文件生成版本号。这一步用于避免缓存导致页面、脚本、曲库与谱面数据错配。
 
-`npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and generates a version from the scripts, styles, and song catalog. The version keeps cached pages, code, and catalog data in sync.
+`npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and generates a version from the scripts, styles, song catalog, and charts. The version keeps cached pages, code, catalog data, and charts in sync.
 
 推送到 `main` 后由 Cloudflare Pages 自动构建发布；`qianyin.pages.dev` 同时可用。Pushes to `main` are built and published automatically; `qianyin.pages.dev` stays available as well.
 

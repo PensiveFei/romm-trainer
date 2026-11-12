@@ -54,6 +54,11 @@ export class YouTubeAudio {
             }
             this.onState(event.data);
           },
+          onPlaybackRateChange: event => {
+            if (this.destroyed || !Number.isFinite(event.data) || event.data <= 0) return;
+            this.rate = event.data;
+            this.onState('ratechange', event.data);
+          },
           onError: event => {
             if (this.destroyed) return;
             clearTimeout(timeout);
@@ -94,6 +99,10 @@ export class YouTubeAudio {
   get paused() { return this.state !== 1; }
   set playbackRate(value) { this.rate = value; this.player?.setPlaybackRate?.(value); }
   get playbackRate() { return this.rate; }
+  get actualPlaybackRate() {
+    const actual=this.player?.getPlaybackRate?.();
+    return Number.isFinite(actual) && actual > 0 ? actual : this.rate;
+  }
   set volume(value) { if (!Number.isFinite(Number(value))) return; this._volume = Math.max(0, Math.min(1, Number(value))); this.player?.setVolume?.(this._volume * 100); }
   get volume() { return this._volume; }
 
