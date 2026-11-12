@@ -19,8 +19,8 @@ function coverFor(song, className) {
   const holder=element('div',className);
   if (song.cover) {
     const img=element('img'); img.src=song.cover; img.alt=''; img.loading='lazy';
-    if (className==='detail-cover') holder.style.setProperty('--cover-image',`url("${song.cover}")`);
-    img.addEventListener('error',()=>{img.remove();holder.append(element('span',className==='song-cover'?'song-placeholder':'detail-placeholder','♫'));},{once:true});
+    if (className==='detail-cover') holder.style.setProperty('--cover-image',`url(${JSON.stringify(img.src)})`);
+    img.addEventListener('error',()=>{img.remove();holder.style.removeProperty('--cover-image');holder.append(element('span',className==='song-cover'?'song-placeholder':'detail-placeholder','♫'));},{once:true});
     holder.append(img);
   } else holder.append(element('span',className==='song-cover'?'song-placeholder':'detail-placeholder','♫'));
   return holder;
