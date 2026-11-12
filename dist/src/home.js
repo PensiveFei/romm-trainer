@@ -8,7 +8,8 @@ const backdrop=$('homeSettingsBackdrop'), help=$('homeHelp');
 const albumArt={Encounter2:'../encounter-covers/01-qkfbm4fgdarh1.png',NodKrai3:'121.webp',Magic:'111.webp',NodKrai2:'97.webp',NodKrai1:'85.webp',Natlan2:'73.webp',Natlan:'61.webp',Mondstadt:'01.webp',Liyue:'13.webp',Inazuma:'25.webp',Sumeru:'37.webp',Fontaine:'49.webp'};
 const heroIds=['Encounter2','NodKrai3','Magic','Mondstadt','Sumeru'];
 const featuredIds=['_GMusic106','_GMusic104','_GMusic16'];
-let catalog=null, heroIndex=0, expanded=true, settingsFromHome=false;
+const compactHome=window.matchMedia('(orientation:landscape) and (max-height:600px), (orientation:portrait) and (max-width:600px)').matches;
+let catalog=null, heroIndex=0, expanded=!compactHome, settingsFromHome=false;
 let lastHeroInteraction=Date.now();
 
 function el(tag,className,text) {
