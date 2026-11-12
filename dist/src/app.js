@@ -556,7 +556,9 @@ function drawNote(x, y, radius, isHold) {
 function renderStage(songMs) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1,2);
-  const w = rect.width, h = rect.height;
+  // The application can rotate its viewport on a portrait phone; client
+  // dimensions remain in canvas coordinates while the bounding box swaps axes.
+  const w = canvas.clientWidth ?? rect.width, h = canvas.clientHeight ?? rect.height;
   if (!w || !h) return;
   if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)) {
     canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);

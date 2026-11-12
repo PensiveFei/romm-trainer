@@ -100,7 +100,7 @@ function restoreDrawer() {
   drawerParent.insertBefore(drawer,drawerNext);drawer.querySelector('.drawer-head h2').textContent='曲谱与设置';backdrop.hidden=true;home.inert=false;$('homeSettingsOpen').focus();
 }
 $('homeSettingsOpen').addEventListener('click',()=>{
-  settingsFromHome=true;home.inert=true;backdrop.hidden=false;document.body.append(drawer);drawer.classList.add('home-drawer');drawer.querySelector('.drawer-head h2').textContent='设置';
+  settingsFromHome=true;home.inert=true;backdrop.hidden=false;document.querySelector('.app-viewport').append(drawer);drawer.classList.add('home-drawer');drawer.querySelector('.drawer-head h2').textContent='设置';
   settingsNav.querySelectorAll('button').forEach((item,index)=>item.setAttribute('aria-current',String(index===0)));controlColumn.scrollTop=0;
   themeSelect.value=$('themeSelect').value;window.dispatchEvent(new Event('romm:open-settings'));
 });

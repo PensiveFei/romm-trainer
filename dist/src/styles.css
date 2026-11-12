@@ -33,6 +33,7 @@
   .online-panel iframe { max-width: 420px; }
 }
 * { box-sizing: border-box; }
+.app-viewport { display:contents; }
 html { min-height: 100%; background: #1d2736; }
 body { margin: 0; min-width: 720px; color: var(--ink); font: 14px/1.5 var(--serif); }
 button, input, select { font: inherit; }
@@ -469,12 +470,12 @@ body { min-width:0; }
 
 /* Touch lanes follow the same six centers as the canvas and support multi-touch. */
 .touch-controls { display:none; }
-@media (pointer:coarse), (orientation:landscape) and (max-height:600px) {
+@media (pointer:coarse), (orientation:landscape) and (max-height:600px), (orientation:portrait) and (max-width:600px) {
   .touch-controls { position:absolute; z-index:6; left:50%; bottom:30px; transform:translateX(-50%); width:min(78%,1050px); height:150px; display:grid; grid-template-columns:repeat(6,1fr); touch-action:none; }
   .touch-controls button { min-width:0; border:0; border-radius:16px; background:transparent; touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; }
   .touch-controls button:active { background:linear-gradient(0deg,rgba(239,225,181,.16),transparent); }
 }
-@media (orientation:landscape) and (max-height:600px) {
+@media (orientation:landscape) and (max-height:600px), (orientation:portrait) and (max-width:600px) {
   .game-frame,.app-shell { min-height:0; height:100vh; height:100dvh; }
   .topbar { height:48px; padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); gap:8px; }
   .brand { min-width:0; }.brand-copy,.brand-emblem { display:none; }
@@ -487,4 +488,12 @@ body { min-width:0; }
   .under-stage,.stage-foot { display:none; }.stage-hint { top:39%; }.feedback { top:58%; }.message { bottom:8px; max-width:95%; font-size:11px; }
   .tools-drawer { top:48px; right:8px; max-height:calc(100% - 54px); width:min(610px,calc(100vw - 16px)); }
   .stage-wrap[data-theme].with-player { width:calc(100% - 190px); }.online-panel { top:90px; right:8px; width:175px; padding:6px; }.online-panel iframe { width:100%; height:100px; }.online-help { display:none; }
+}
+
+/* Keep the application landscape even when a phone's browser stays portrait. */
+@media (orientation:portrait) and (max-width:600px) {
+  html,body { width:100%; height:100%; overflow:hidden; }
+  .app-viewport { display:block; position:fixed; top:0; left:100vw; width:100vh; height:100vw; width:100dvh; height:100dvw; transform:rotate(90deg); transform-origin:top left; overflow:hidden; }
+  .game-frame,.app-shell { height:100%; min-height:0; }
+  .tools-drawer:not(.home-drawer) { width:min(610px,calc(100% - 16px)); }
 }
