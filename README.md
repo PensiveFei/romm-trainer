@@ -2,6 +2,8 @@
 
 Repertoire of Myriad Melodies Trainer
 
+在线体验 / Play online: [qianyin.fun](https://qianyin.fun/)
+
 ## 项目介绍
 
 千音习谱是为《原神》千音雅集制作的“练习模式”，旨在为玩家提供专业练谱工具。
