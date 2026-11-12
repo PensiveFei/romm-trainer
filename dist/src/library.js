@@ -89,7 +89,7 @@ function renderDetails() {
 }
 function renderGroups(scrollToSelection=false) {
   groupsEl.replaceChildren();
-  const term=search.value.trim(); let matches=0, selectedGroup=null;
+  const term=search.value.trim(); let matches=0, selectedTile=null;
   for (const group of catalog.groups) {
     if (groupFilter && group.id!==groupFilter) continue;
     const songs=group.songs.filter(s=>(!favoriteFilter || favorites.has(s.id)) && (statusFilter==='all' || s.status===statusFilter) && songMatches(s,term));
@@ -112,14 +112,23 @@ function renderGroups(scrollToSelection=false) {
         button.setAttribute('aria-pressed','true'); renderDetails();
       });
       tiles.append(button);
-      if (selected?.id===song.id) selectedGroup=section;
+      if (selected?.id===song.id) selectedTile=button;
     }
     section.append(tiles);groupsEl.append(section);
   }
   if (!matches) groupsEl.append(element('p','library-loading',favoriteFilter && !term && statusFilter==='all'?tr('还没有收藏曲目。可在歌曲详情下方点击星标收藏。','No favorites yet. Select the star in a song’s details to save it.'):tr('没有找到符合条件的歌曲。','No songs match these filters.','条件に合う楽曲が見つかりません。')));
   const all=catalog.groups.flatMap(group=>group.songs);
   count.textContent=groupFilter || favoriteFilter || term || statusFilter!=='all' ? tr(`${matches} 首曲目`,`${matches} ${matches===1?'song':'songs'}`,`${matches}曲`) : tr(`${all.length} 首曲目 · ${all.filter(song=>song.status==='ready').length} 首可练习`,`${all.length} songs · ${all.filter(song=>song.status==='ready').length} playable`,`${all.length}曲 · ${all.filter(song=>song.status==='ready').length}曲を練習可能`);
-  if (scrollToSelection && selectedGroup) requestAnimationFrame(()=>{groupsEl.scrollTop+=selectedGroup.getBoundingClientRect().top-groupsEl.getBoundingClientRect().top;});
+  if (scrollToSelection && selectedTile) {
+    const tile=selectedTile, songId=selected?.id;
+    requestAnimationFrame(()=>{
+      if (view.hidden || !tile.isConnected || selected?.id!==songId) return;
+      const item=tile.getBoundingClientRect(), list=groupsEl.getBoundingClientRect();
+      if (item.top < list.top || item.bottom > list.bottom) {
+        groupsEl.scrollTop+=item.top-list.top-Math.max(0,(list.height-item.height)/2);
+      }
+    });
+  }
 }
 function chooseInFilter() {
   if (!catalog) return;
@@ -154,8 +163,16 @@ $('libraryOpen').addEventListener('click',()=>show());
 $('libraryDrawerButton').addEventListener('click',()=>show());
 window.addEventListener('romm:open-library',event=>show(event.detail || {}));
 close.addEventListener('click',()=>hide());
-search.addEventListener('input',()=>{if(catalog){chooseInFilter();renderGroups();renderDetails();}});
-statusSelect?.addEventListener('change',()=>{statusFilter=['ready','review','missing'].includes(statusSelect.value)?statusSelect.value:'all';if(catalog){chooseInFilter();renderGroups();renderDetails();}});
+function updateFilters() {
+  if (!catalog) return;
+  const previousId=selected?.id;
+  chooseInFilter();
+  renderGroups();
+  // Keep an open soundtrack preview alive when the selection did not change.
+  if (selected?.id !== previousId) renderDetails();
+}
+search.addEventListener('input',updateFilters);
+statusSelect?.addEventListener('change',()=>{statusFilter=['ready','review','missing'].includes(statusSelect.value)?statusSelect.value:'all';updateFilters();});
 start.addEventListener('click',()=>{
   if (!selected || selected.status!=='ready') return;
   window.dispatchEvent(new CustomEvent('romm:select-song',{detail:selected})); hide(true);
@@ -188,7 +205,8 @@ window.addEventListener('keydown',event=>{
 });
 view.addEventListener('keydown',event=>{
   if (event.key!=='Tab') return;
-  const focusable=[...view.querySelectorAll('button:not(:disabled), input, [tabindex="0"]')];
+  const focusable=[...view.querySelectorAll('button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), a[href], iframe, [tabindex]:not([tabindex="-1"])')]
+    .filter(node=>node.getClientRects().length && !node.closest('[hidden], [inert]'));
   if (!focusable.length) return;
   if (event.shiftKey && document.activeElement===focusable[0]) {event.preventDefault();focusable.at(-1).focus();}
   else if (!event.shiftKey && document.activeElement===focusable.at(-1)) {event.preventDefault();focusable[0].focus();}

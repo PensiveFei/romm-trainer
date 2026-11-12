@@ -85,7 +85,7 @@ let stageWidth=0, stageHeight=0, backdropKey='', stageFrameQueued=false;
 let lastHitsSignature='', lastProgressKey='', lastSeekAria='', renderSession=null, firstRenderNote=0;
 const stageObserver = typeof window.ResizeObserver === 'function' ? new window.ResizeObserver(entries => {
   const entry=entries.find(item=>item.target===canvas);
-  if (entry) { stageWidth=entry.contentRect.width; stageHeight=entry.contentRect.height; }
+  if (entry) { stageWidth=entry.contentRect.width; stageHeight=entry.contentRect.height; scheduleStageFrame(); }
 }) : null;
 stageObserver?.observe(canvas);
 
@@ -117,6 +117,7 @@ function applyTheme(id, save = true) {
   els.theme.value = themeId;
   hitEffects.length = 0;
   if (save) { try { localStorage.setItem('romm-trainer-theme', themeId); } catch {} }
+  scheduleStageFrame();
 }
 function setDrawerOpen(open) {
   const wasOpen = !els.drawer.hidden;
@@ -338,6 +339,7 @@ function seekPractice(requestedMs) {
   session=new Judge(chart,target,endMs,rate,offset,hitWindowMs);
   previewMs=target;hasStarted=true;
   updateStats();updateTime(target);
+  scheduleStageFrame();
   setMessage('已跳转至 '+format(target,true)+'；本轮完成度从当前位置重新计算。',true);
 }
 function refreshRangeUi() {
@@ -365,6 +367,7 @@ function pause() {
   isPlaying = false; audio.pause(); previewMs = now;
   setPlayText('继续练习'); els.playIcon.textContent = '▶';
   updateStats();
+  scheduleStageFrame();
 }
 function resetSession() {
   if (isPlaying) pause();
@@ -378,6 +381,7 @@ function resetSession() {
   els.hint.classList.remove('hidden');
   setPlayText('开始练习'); els.playIcon.textContent = '▶';
   updateStats(); updateTime(previewMs);
+  scheduleStageFrame();
 }
 async function play() {
   if (playPending) return;
@@ -435,6 +439,7 @@ async function play() {
     await activeAudio.play();
     if (activeAudio !== audio || activePlay !== playId) { if (activeAudio !== audio) activeAudio.pause(); return; }
     isPlaying = true; ending = false;
+    scheduleStageFrame();
     els.hint.classList.add('hidden');
     setPlayText('暂停'); els.playIcon.textContent = 'Ⅱ';
     els.play.blur();
@@ -471,7 +476,14 @@ function completePass() {
     session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
     held.clear(); activeInputs.clear();
     seekSong(Math.max(0,startMs - 2000));
-    if (audio.paused) void audio.play().catch(() => { isPlaying = false; setMessage('请点击继续练习。'); });
+    if (audio.paused) {
+      const loopAudio=audio, loopSession=session, loopPlayId=playId;
+      void loopAudio.play().catch(() => {
+        if (audio !== loopAudio || session !== loopSession || playId !== loopPlayId || !isPlaying) return;
+        pause();
+        setMessage('请点击继续练习。',false,0);
+      });
+    }
     setMessage('上一轮：完成度 ' + completion + '%，命中 ' + hitCount + ' / ' + total + '。继续练习。', true);
     ending = false;
   } else {
@@ -664,10 +676,13 @@ function useMetronome() {
 }
 async function importChart(file) {
   if (!file) return;
+  const selection=++selectionId;
   if (file.size > 1024 * 1024) { setMessage('谱面文件不能超过 1 MB。'); return; }
   try {
-    const parsed = validateChart(JSON.parse(await file.text()));
-    selectionId++; stopAudio();
+    const text=await file.text();
+    if (selection !== selectionId) return;
+    const parsed = validateChart(JSON.parse(text));
+    stopAudio();
     chart = parsed; sourceType = 'local'; startMs = 0; endMs = chart.durationMs;
     currentIdentity=chartIdentity(sourceType,currentSong,chart);clearResult();
     audioReady = false;
@@ -676,7 +691,7 @@ async function importChart(file) {
     musicStart = 0; setAudioMode('local');
     updateMeta(); refreshRangeUi(); resetSession();
     setMessage('已载入本地谱面，请选择它的配套音频。', true, 0);
-  } catch (error) { setMessage('谱面导入失败：' + (error instanceof Error ? error.message : '文件无效'), false, 0); }
+  } catch (error) { if (selection === selectionId) setMessage('谱面导入失败：' + (error instanceof Error ? error.message : '文件无效'), false, 0); }
 }
 
 function roundRect(x,y,w,h,r) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
@@ -856,7 +871,7 @@ function frame() {
     updateStats();
   }
   renderStage(now); updateTime(now);
-  scheduleStageFrame();
+  if (isPlaying || hitEffects.length) scheduleStageFrame();
 }
 
 els.theme.addEventListener('change',() => { applyTheme(els.theme.value); els.theme.blur(); });
@@ -883,6 +898,7 @@ els.loop.addEventListener('change',() => { if (isPlaying) pause(); resetSession(
 els.scroll.addEventListener('input',() => {
   scrollRate=Number(els.scroll.value); els.scrollLabel.textContent=scrollRate.toFixed(1)+'×';
   try { localStorage.setItem('romm-trainer-scroll',String(scrollRate)); } catch {}
+  scheduleStageFrame();
 });
 els.hitVolume?.addEventListener('input',()=>{
   hitSound.setVolume(els.hitVolume.value);
@@ -932,6 +948,7 @@ els.chartFile.addEventListener('change',async()=>{ await importChart(els.chartFi
 els.audioFile.addEventListener('change',()=>{
   const file=els.audioFile.files[0];
   if (file) {
+    selectionId++;
     const selectedSong=sourceType === 'song' ? currentSong : null;
     const selectedId=selectionId;
     const url=URL.createObjectURL(file), expectedDuration=chart.durationMs;
@@ -1027,7 +1044,7 @@ window.addEventListener('keydown',(event) => {
     if (keys.includes(event.code) && keys[bindingIndex] !== event.code) { setKeyHelp('这个按键已分配给其他轨道'); return; }
     keys[bindingIndex]=event.code; bindingIndex=-1; setKeyHelp('键位已保存');
     try { localStorage.setItem('romm-trainer-keys',JSON.stringify(keys)); } catch {}
-    renderKeys(); return;
+    renderKeys(); scheduleStageFrame(); return;
   }
   if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }
   if (event.code === 'Escape' && els.quickMenu && !els.quickMenu.hidden) { event.preventDefault(); setQuickMenu(false); els.quickToggle.focus(); return; }
@@ -1056,8 +1073,9 @@ window.addEventListener('romm:language-changed',()=>{
   if (label && sourceType === 'song') label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong), '公式サウンドトラック · ' + songName(currentSong));
 });
 window.addEventListener('keyup',event=>releaseInput('key:'+event.code));
-window.addEventListener('blur',()=>{ if (playPending) stopAudio(); if (isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); setMessage('窗口失去焦点，练习已暂停。'); } });
-document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); } if (!document.hidden) scheduleStageFrame(); });
+window.addEventListener('blur',()=>{ if (playPending) stopAudio(); const wasPlaying=isPlaying; if (isPlaying) pause(); if (held.size) { releaseHeldAt(previewMs); updateStats(); scheduleStageFrame(); } if (wasPlaying) setMessage('窗口失去焦点，练习已暂停。'); });
+document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) pause(); if (document.hidden && held.size) { releaseHeldAt(previewMs); updateStats(); } if (!document.hidden) scheduleStageFrame(); });
+window.addEventListener('resize',scheduleStageFrame);
 
 initLanguage(); renderKeys(); updateMeta(); refreshRangeUi(); updateStats(); updateTime(0);
 replaceAudio(makeDemoAudio(), 'demo');

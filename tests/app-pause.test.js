@@ -55,7 +55,7 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
     addEventListener(name,fn){ this.listeners[name]=fn; }
     load(){ this.listeners.loadedmetadata?.(); }
-    async play(){ this.paused=false; }
+    async play(){ if (this.failNextPlay) { this.failNextPlay=false; throw new Error('playback blocked'); } this.paused=false; }
     pause(){ this.paused=true; }
   }
   globalThis.Audio=FakeAudio;
@@ -80,6 +80,12 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   assert.equal(frameRequests,2, 'backgrounding stops the practice render loop');
   document.hidden=false; documentListeners.visibilitychange.forEach(fn=>fn());
   assert.equal(frameRequests,3, 'returning to the page resumes rendering');
+  nextFrame();
+  assert.equal(frameRequests,3, 'a paused stage does not continuously repaint');
+  el.themeSelect.value='wind';el.themeSelect.dispatch('change');
+  assert.equal(frameRequests,4, 'changing the theme schedules a fresh paused frame');
+  nextFrame();
+  assert.equal(frameRequests,4, 'the new paused frame does not start an animation loop');
   assert.equal(el.scrollSpeed.value, 0.3);
   assert.equal(el.scrollLabel.textContent, '0.3×');
   el.scrollSpeed.value='0.4'; el.scrollSpeed.dispatch('input');
@@ -279,4 +285,43 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   el.timelineSeek.value='6000';el.timelineSeek.dispatch('change');
   await begin();nextFrame();
   assert.notEqual(el.practiceResult.open,true,'seeking to the end must not reopen an old result');
+
+  // A slow chart read must not replace the later selection or its status message.
+  let resolveImport;
+  el.chartFile.files=[{size:64,text:()=>new Promise(resolve=>{resolveImport=resolve;})}];
+  el.chartFile.dispatch('change');
+  el.demoButton.dispatch('click');
+  resolveImport(JSON.stringify(song)); await flush(); await flush();
+  assert.equal(el.trackTitle.textContent,'节拍练习 · 六键');
+  assert.match(el.message.textContent,/已恢复原创示范谱/);
+
+  // Likewise, manually picking audio while a song fetch is pending takes priority.
+  let resolveSong;
+  globalThis.fetch=()=>new Promise(resolve=>{resolveSong=resolve;});
+  el.songButton.dispatch('click');
+  el.audioFile.files=[new Blob(['audio'],{type:'audio/wav'})];
+  el.audioFile.dispatch('change');
+  const chosenAudio=testAudio.src;
+  resolveSong({ok:true,json:async()=>song}); await flush(); await flush();
+  assert.equal(el.trackTitle.textContent,'节拍练习 · 六键');
+  assert.equal(testAudio.src,chosenAudio);
+
+  // Losing focus after pausing cannot leave a physically released key held forever.
+  el.demoButton.dispatch('click');
+  await begin(); testAudio.currentTime=10; press('keydown','KeyA');
+  el.playButton.dispatch('click');
+  const missesBeforeBlur=Number(el.statMiss.textContent);
+  listeners.blur.forEach(fn=>fn());
+  assert.equal(Number(el.statMiss.textContent),missesBeforeBlur+1);
+  press('keyup','KeyA');
+  assert.equal(Number(el.statMiss.textContent),missesBeforeBlur+1);
+
+  // If an ended audio element cannot restart a loop, the transport remains usable.
+  el.demoButton.dispatch('click');
+  el.loopToggle.checked=true;el.loopToggle.dispatch('change');
+  await begin();testAudio.currentTime=32;testAudio.paused=true;testAudio.failNextPlay=true;
+  testAudio.listeners.ended(); await flush();
+  assert.equal(el.playText.textContent,'继续练习');
+  assert.equal(el.playIcon.textContent,'▶');
+  assert.match(el.message.textContent,/请点击继续练习/);
 });

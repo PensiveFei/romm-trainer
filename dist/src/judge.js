@@ -10,6 +10,7 @@ export class Judge {
     this.hitWindowMs = Number.isFinite(hitWindowMs) ? Math.max(120, Math.min(240, hitWindowMs)) : DEFAULT_HIT_WINDOW_MS;
     this.states = chart.notes.filter(n => n.atMs >= startMs && n.atMs < endMs && n.atMs + n.holdMs <= endMs)
       .map(n => ({ ...n, status: 'pending', errorMs: null, grade: null }));
+    this.firstActive = 0;
     this.hits = 0; this.misses = 0; this.early = 0; this.late = 0; this.combo = 0; this.maxCombo = 0;
     this.tempoMap = chart.tempoMap || [{atMs: 0, bpm: chart.bpm || 120}];
     this.maxScore = this.states.reduce((total,note) => total + PRECISE_POINTS + this.holdPoints(note.atMs, note.atMs + note.holdMs), 0);
@@ -56,7 +57,13 @@ export class Judge {
   }
   tick(songMs) {
     const now = this.correctedTime(songMs);
-    for (const note of this.states) {
+    // Notes are ordered by start time. Finished notes never become active
+    // again, and future notes cannot accrue hold points or be missed yet.
+    while (this.firstActive < this.states.length &&
+      (this.states[this.firstActive].status === 'hit' || this.states[this.firstActive].status === 'miss')) this.firstActive++;
+    for (let i=this.firstActive; i<this.states.length; i++) {
+      const note=this.states[i];
+      if (note.atMs > now) break;
       if (note.status === 'pending' && this.realError(songMs, note.atMs) > this.hitWindowMs) this.miss(note);
       if (note.status === 'holding') {
         this.creditHold(note, now);
