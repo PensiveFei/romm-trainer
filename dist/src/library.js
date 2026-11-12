@@ -135,7 +135,7 @@ function hide(toPractice=false) {
   if (detail.querySelector('.library-audio-mount iframe')) renderDetails();
   view.hidden=true;
   if (!toPractice && returnTo==='home') window.dispatchEvent(new Event('romm:show-home'));
-  else {gameFrame.inert=false;$('libraryOpen').focus();}
+  else {gameFrame.inert=false;window.dispatchEvent(new Event('romm:practice-visible'));$('libraryOpen').focus();}
 }
 $('libraryOpen').addEventListener('click',()=>show());
 $('libraryDrawerButton').addEventListener('click',()=>show());

@@ -7,12 +7,12 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   class FakeElement {
     constructor(id='') {
       this.id=id; this.tagName='DIV'; this.textContent=''; this.children=[]; this.listeners={};
-      this.value=''; this.checked=false; this.style={}; this.dataset={};
+      this.value=''; this.checked=false; this.style={}; this.dataset={}; this.replacements=0;
       this.classList={ add(){}, remove(){}, toggle(){} };
     }
     addEventListener(name,fn) { (this.listeners[name] ||= []).push(fn); }
     dispatch(name,event={}) { for (const fn of this.listeners[name] || []) fn(event); }
-    replaceChildren(...children) { this.children=children; }
+    replaceChildren(...children) { this.children=children; this.replacements++; }
     appendChild(child) { this.children.push(child); }
     setAttribute() {}
     focus() {}
@@ -29,21 +29,23 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
     'hitWindow','hitWindowLabel','songButton','songOptions','onlinePanel','songAudioStatus','musicStart',
     'onlineButton','metronomeButton','youtubePlayer','youtubeMount','timelineSeek',
-    'touchLane0','touchLane1','touchLane2','touchLane3','touchLane4','touchLane5'];
+    'touchLane0','touchLane1','touchLane2','touchLane3','touchLane4','touchLane5','homeView','libraryView'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
+  el.homeView.hidden=false; el.libraryView.hidden=true;
   const listeners={};
+  const documentListeners={};
   globalThis.HTMLElement=FakeElement;
   globalThis.window={ devicePixelRatio:1, addEventListener(name,fn){ (listeners[name] ||= []).push(fn); } };
   globalThis.document={
     hidden:false, body:new FakeElement('body'), getElementById(id){ return el[id]; },
     createElement(){ return new FakeElement(); }, createTextNode(text){ return {textContent:text}; },
-    addEventListener(){}
+    addEventListener(name,fn){ (documentListeners[name] ||= []).push(fn); }
   };
   const settings=new Map([['romm-trainer-scroll','0.3']]);
   globalThis.localStorage={ getItem(key){return settings.get(key) ?? null;}, setItem(key,value){settings.set(key,value);} };
-  let nextFrame;
-  globalThis.requestAnimationFrame=(fn)=>{ nextFrame=fn; return 0; };
+  let nextFrame, frameRequests=0;
+  globalThis.requestAnimationFrame=(fn)=>{ frameRequests++; nextFrame=fn; return 0; };
   class FakeAudio {
     constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
     addEventListener(name,fn){ this.listeners[name]=fn; }
@@ -53,6 +55,18 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   }
   globalThis.Audio=FakeAudio;
   await import('../dist/src/app.js');
+  assert.equal(frameRequests,0, 'the hidden practice stage does not keep rendering behind the home page');
+  el.homeView.hidden=true;
+  listeners['romm:practice-visible'].forEach(fn=>fn());
+  assert.equal(frameRequests,1, 'entering practice restarts rendering');
+  el.libraryView.hidden=false; nextFrame();
+  assert.equal(frameRequests,1, 'opening the library stops the practice render loop');
+  el.libraryView.hidden=true; listeners['romm:practice-visible'].forEach(fn=>fn());
+  assert.equal(frameRequests,2);
+  document.hidden=true; nextFrame();
+  assert.equal(frameRequests,2, 'backgrounding stops the practice render loop');
+  document.hidden=false; documentListeners.visibilitychange.forEach(fn=>fn());
+  assert.equal(frameRequests,3, 'returning to the page resumes rendering');
   assert.equal(el.scrollSpeed.value, 0.3);
   assert.equal(el.scrollLabel.textContent, '0.3×');
   el.scrollSpeed.value='0.4'; el.scrollSpeed.dispatch('input');
@@ -91,6 +105,9 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
   assert.equal(el.performanceScore.textContent,'20');
   assert.notEqual(el.completionValue.textContent,'(0.0%)');
+  const hitDisplayUpdates=el.statHits.replacements;
+  nextFrame(); nextFrame();
+  assert.equal(el.statHits.replacements,hitDisplayUpdates, 'unchanged hit statistics are not rebuilt every frame');
   el.playButton.dispatch('click');
   el.playButton.dispatch('click'); await flush();
   t.mock.timers.tick(1000);
@@ -169,6 +186,11 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   touch(0,'pointerdown',13); touch(5,'pointerdown',14); touch(5,'pointerup',14);
   testAudio.currentTime=11; touch(0,'pointerup',13);
   assert.equal(el.statHits.children[0].textContent.trim(),'4');
+  el.timelineSeek.value='0'; el.timelineSeek.dispatch('input'); el.timelineSeek.dispatch('change');
+  testAudio.currentTime=10;
+  touch(0,'pointerdown',21); touch(0,'pointerdown',22); touch(0,'pointercancel',21);
+  testAudio.currentTime=11; touch(0,'pointerup',22);
+  assert.equal(el.statHits.children[0].textContent.trim(),'1', 'one cancelled finger must not release another finger holding the same lane');
 
   const song = JSON.parse(await readFile(new URL('../dist/data/surasthana-legend.json', import.meta.url), 'utf8'));
   globalThis.fetch = async () => ({ok:true, async json(){return song;}});

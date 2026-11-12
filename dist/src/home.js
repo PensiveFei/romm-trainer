@@ -23,6 +23,7 @@ function openLibrary(options={}) {window.dispatchEvent(new CustomEvent('romm:ope
 function openPractice(song) {
   home.hidden=true;gameFrame.inert=false;
   if(song)window.dispatchEvent(new CustomEvent('romm:select-song',{detail:song}));
+  window.dispatchEvent(new Event('romm:practice-visible'));
   $('playButton').focus();
 }
 function renderFeatured() {

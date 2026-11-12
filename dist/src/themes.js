@@ -120,11 +120,11 @@ export function paintBackdrop(ctx, theme, w, h) {
 }
 
 // Progress is normalized to [0, 1]; the caller creates effects only for successful manual presses.
-export function paintHit(ctx, theme, x, y, radius, progress) {
+export function paintHit(ctx, theme, x, y, radius, progress, compact = false) {
   if (progress < 0 || progress >= 1) return;
   const fade=1-progress, spread=radius*(.65+progress*2.2), color=theme.accent;
   ctx.save(); ctx.globalAlpha=fade*.85; ctx.strokeStyle=color; ctx.fillStyle=color;
-  ctx.lineWidth=1.5+fade; ctx.shadowColor=color; ctx.shadowBlur=8*fade;
+  ctx.lineWidth=1.5+fade; ctx.shadowColor=color; ctx.shadowBlur=(compact ? 4 : 8)*fade;
   if (theme.motif === 'geo') {
     ctx.beginPath();ctx.moveTo(x,y-spread);ctx.lineTo(x+spread,y);ctx.lineTo(x,y+spread);ctx.lineTo(x-spread,y);ctx.closePath();ctx.stroke();
   } else if (theme.motif === 'electro') {
@@ -141,7 +141,7 @@ export function paintHit(ctx, theme, x, y, radius, progress) {
       ctx.beginPath();ctx.arc(x,y,spread*1.17,0,Math.PI*2);ctx.stroke();
     }
   }
-  const count=theme.motif==='dream'?5:6;
+  const count=compact ? 4 : (theme.motif==='dream'?5:6);
   for (let i=0;i<count;i++) {
     const a=i*Math.PI*2/count-Math.PI/2+(theme.motif==='wind'?progress*.9:0);
     const distance=radius*(.65+progress*2.8);

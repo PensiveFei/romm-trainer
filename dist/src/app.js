@@ -4,6 +4,7 @@ import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './t
 import { YouTubeAudio } from './youtube-audio.js';
 import { localAudioStore } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
+import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -50,6 +51,18 @@ let themeId = 'base', currentTheme = getTheme(themeId);
 const hitEffects = [];
 const canvas = els.stage;
 const ctx = canvas.getContext('2d');
+const backdropCanvas = $('stageBackdrop');
+const backdropCtx = backdropCanvas?.getContext('2d');
+const portraitQuery = window.matchMedia?.('(orientation:portrait) and (max-width:600px)');
+const compactQuery = window.matchMedia?.('(pointer:coarse), (orientation:portrait) and (max-width:600px), (orientation:landscape) and (max-height:600px)');
+const coarseQuery = window.matchMedia?.('(pointer:coarse)');
+let stageWidth=0, stageHeight=0, backdropKey='', stageFrameQueued=false;
+let lastHitsSignature='', lastProgressKey='', lastSeekAria='', renderSession=null, firstRenderNote=0;
+const stageObserver = typeof window.ResizeObserver === 'function' ? new window.ResizeObserver(entries => {
+  const entry=entries.find(item=>item.target===canvas);
+  if (entry) { stageWidth=entry.contentRect.width; stageHeight=entry.contentRect.height; }
+}) : null;
+stageObserver?.observe(canvas);
 
 try {
   const savedWindow = Number(localStorage.getItem('romm-trainer-hit-window'));
@@ -164,27 +177,42 @@ function setAudioMode(mode) {
 }
 function updateStats() {
   const completion = formatCompletion(session.completion);
-  els.performanceScore.textContent = String(Math.floor(session.score + 1e-8));
+  const score=String(Math.floor(session.score + 1e-8));
+  if (els.performanceScore.textContent !== score) els.performanceScore.textContent = score;
   if (els.completionValue.textContent !== '(' + completion + '%)') {
     els.completionValue.textContent = '(' + completion + '%)';
     els.completionFill.style.width = completion + '%';
     els.completionTrack.setAttribute('aria-valuenow', completion);
     els.completionTrack.setAttribute('aria-valuetext', completion + '%');
   }
-  els.hits.replaceChildren(document.createTextNode(String(session.hits) + ' '));
-  const small = document.createElement('small');
-  small.textContent = '/ ' + session.states.length;
-  els.hits.appendChild(small);
-  els.combo.textContent = session.combo;
-  els.timing.textContent = session.early + ' / ' + session.late;
-  els.miss.textContent = session.misses;
+  const hitsSignature=session.hits + '/' + session.states.length;
+  if (hitsSignature !== lastHitsSignature) {
+    els.hits.replaceChildren(document.createTextNode(String(session.hits) + ' '));
+    const small = document.createElement('small');
+    small.textContent = '/ ' + session.states.length;
+    els.hits.appendChild(small); lastHitsSignature=hitsSignature;
+  }
+  const combo=String(session.combo), timing=session.early + ' / ' + session.late, misses=String(session.misses);
+  if (els.combo.textContent !== combo) els.combo.textContent=combo;
+  if (els.timing.textContent !== timing) els.timing.textContent=timing;
+  if (els.miss.textContent !== misses) els.miss.textContent=misses;
 }
 function updateTime(ms, fromSeek = false) {
   if (seeking && !fromSeek) return;
-  els.elapsed.textContent = format(ms);
-  els.stageTime.textContent = format(ms) + ' / ' + format(chart.durationMs);
-  els.fill.style.width = Math.max(0,Math.min(100,ms / chart.durationMs * 100)) + '%';
-  if (els.timelineSeek) { els.timelineSeek.value=String(ms);els.timelineSeek.setAttribute('aria-valuetext',format(ms,true)); }
+  const current=format(ms), stageTime=current + ' / ' + format(chart.durationMs);
+  if (els.elapsed.textContent !== current) els.elapsed.textContent=current;
+  if (els.stageTime.textContent !== stageTime) els.stageTime.textContent=stageTime;
+  const clamped=Math.max(0,Math.min(chart.durationMs,ms));
+  const displayedMs=clamped >= chart.durationMs ? chart.durationMs : Math.floor(clamped / 100) * 100;
+  const progressKey=displayedMs + '/' + chart.durationMs;
+  if (progressKey !== lastProgressKey) {
+    els.fill.style.width=displayedMs / chart.durationMs * 100 + '%'; lastProgressKey=progressKey;
+  }
+  if (els.timelineSeek) {
+    if (els.timelineSeek.value !== String(displayedMs)) els.timelineSeek.value=String(displayedMs);
+    const aria=format(displayedMs,true);
+    if (aria !== lastSeekAria) { els.timelineSeek.setAttribute('aria-valuetext',aria); lastSeekAria=aria; }
+  }
 }
 function seekPractice(requestedMs) {
   seeking=false;
@@ -538,9 +566,9 @@ function notePath(x,y,radius,shape) {
     ctx.closePath();
   } else ctx.arc(x,y,radius,0,Math.PI*2);
 }
-function drawNote(x, y, radius, isHold) {
+function drawNote(x, y, radius, isHold, compact) {
   const colors=isHold ? currentTheme.hold : currentTheme.tap;
-  ctx.save(); ctx.shadowColor=rgba(colors[1],.7); ctx.shadowBlur=13;
+  ctx.save(); ctx.shadowColor=rgba(colors[1],.7); ctx.shadowBlur=compact ? 7 : 13;
   notePath(x,y,radius,currentTheme.shape);ctx.fillStyle=colors[2];ctx.fill();
   ctx.shadowBlur=0;ctx.lineWidth=2.2;ctx.strokeStyle='rgba(250,250,241,.92)';ctx.stroke();
   const fill=ctx.createRadialGradient(x-radius*.3,y-radius*.4,radius*.05,x,y,radius);
@@ -554,25 +582,36 @@ function drawNote(x, y, radius, isHold) {
   paintMotif(ctx,currentTheme.motif,x,y,radius*.43,colors[0]);
   ctx.restore();
 }
+function renderBackdrop(w,h,dpr) {
+  if (!backdropCtx) { paintBackdrop(ctx,currentTheme,w,h); return; }
+  const key=[w,h,dpr,themeId].join(':');
+  if (key === backdropKey) return;
+  backdropKey=key;
+  backdropCanvas.width=Math.round(w*dpr); backdropCanvas.height=Math.round(h*dpr);
+  backdropCtx.setTransform(dpr,0,0,dpr,0,0);
+  backdropCtx.clearRect(0,0,w,h);
+  paintBackdrop(backdropCtx,currentTheme,w,h);
+}
 function renderStage(songMs) {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1,2);
-  // Use the canvas's layout size so the drawing follows the available stage.
-  const w = canvas.clientWidth ?? rect.width, h = canvas.clientHeight ?? rect.height;
+  const compact=!!compactQuery?.matches;
+  const dpr = Math.min(window.devicePixelRatio || 1,compact ? 1.5 : 2);
+  // ResizeObserver keeps frame rendering from forcing a new layout after UI updates.
+  const rect = stageWidth && stageHeight ? null : canvas.getBoundingClientRect();
+  const w = stageWidth || canvas.clientWidth || rect?.width, h = stageHeight || canvas.clientHeight || rect?.height;
   if (!w || !h) return;
   if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)) {
     canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
-  const portraitPhone=window.matchMedia?.('(orientation:portrait) and (max-width:600px)').matches;
+  const portraitPhone=!!portraitQuery?.matches;
   const {left,laneWidth,hitY,spawnY,clipTop,travelMs}=stageLayout(w,h,portraitPhone);
   const travel = travelMs / scrollRate;
   const pxPerMs = (hitY - spawnY) / travel;
   const showTime = songMs - offset * rate;
   const center = lane => left + lane * laneWidth + laneWidth / 2;
   const radius = Math.min(23,laneWidth * .25);
-  paintBackdrop(ctx,currentTheme,w,h);
+  renderBackdrop(w,h,dpr);
   // Keep entering notes clear of the toolbar and the portrait score display.
   ctx.save(); ctx.beginPath(); ctx.rect(0,clipTop,w,Math.max(0,h-clipTop)); ctx.clip();
 
@@ -586,27 +625,25 @@ function renderStage(songMs) {
     ctx.beginPath(); ctx.moveTo(x,spawnY); ctx.lineTo(x,hitY); ctx.stroke();
   }
 
-  // Draw links behind notes that must be pressed simultaneously.
+  if (renderSession !== session) { renderSession=session; firstRenderNote=0; }
+  firstRenderNote=firstUnfinishedNote(session.states,firstRenderNote);
+  const visible=visibleStageNotes(session.states,firstRenderNote,showTime,hitY,h,radius,pxPerMs);
+  // Draw links behind visible notes that must be pressed simultaneously.
   const chords = new Map();
-  for (const note of session.states) {
+  for (const {note,headY} of visible) {
     if (note.status !== 'pending') continue;
-    const group = chords.get(note.atMs) || [];
-    group.push(note); chords.set(note.atMs,group);
+    const group=chords.get(note.atMs);
+    if (group) { group.min=Math.min(group.min,note.lane); group.max=Math.max(group.max,note.lane); group.count++; }
+    else chords.set(note.atMs,{min:note.lane,max:note.lane,count:1,y:headY});
   }
-  for (const [atMs, notes] of chords) {
-    const y=hitY-(atMs-showTime)*pxPerMs;
-    if (notes.length<2 || y < -30 || y > h+20) continue;
-    const lanes=notes.map(n=>n.lane);
+  for (const group of chords.values()) {
+    if (group.count<2 || group.y < -30 || group.y > h+20) continue;
     ctx.strokeStyle=rgba(currentTheme.accent,.82); ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(center(Math.min(...lanes)),y);ctx.lineTo(center(Math.max(...lanes)),y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(center(group.min),group.y);ctx.lineTo(center(group.max),group.y);ctx.stroke();
   }
 
-  for (const note of session.states) {
-    if (note.status === 'hit' || note.status === 'miss') continue;
+  for (const {note,headY,tailY} of visible) {
     const x = center(note.lane);
-    const headY = hitY - (note.atMs-showTime)*pxPerMs;
-    const tailY = hitY - (note.atMs+note.holdMs-showTime)*pxPerMs;
-    if (headY < -radius || tailY > h+radius) continue;
     if (note.holdMs > 0) {
       const shownHead = Math.min(hitY,headY);
       const top = Math.max(-radius,tailY);
@@ -622,7 +659,7 @@ function renderStage(songMs) {
         ctx.moveTo(x+width/2,top);ctx.lineTo(x+width/2,shownHead);ctx.stroke();
       }
     }
-    if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0);
+    if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0,compact);
   }
 
   ctx.save();
@@ -632,12 +669,12 @@ function renderStage(songMs) {
   ctx.restore();
   const effectTime=performance.now();
   for (let i=hitEffects.length-1;i>=0;i--) {
-    const effect=hitEffects[i], progress=(effectTime-effect.started)/700;
+    const effect=hitEffects[i], progress=(effectTime-effect.started)/(compact ? 500 : 700);
     if (progress>=1) hitEffects.splice(i,1);
     else if (effect.unmatched) {
       ctx.save();ctx.globalAlpha=(1-progress)*.7;ctx.strokeStyle='#ffd0bd';ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(center(effect.lane),hitY,radius*(.55+progress),0,Math.PI*2);ctx.stroke();ctx.restore();
-    } else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress);
+    } else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress,compact);
   }
   for (let lane=0;lane<6;lane++) {
     const x=center(lane);
@@ -649,7 +686,7 @@ function renderStage(songMs) {
     ctx.beginPath();ctx.arc(x,hitY,9,0,Math.PI*2);
     ctx.fillStyle=held.has(lane)?currentTheme.accent:'#f0eee5';ctx.fill();
     ctx.restore();
-    if (!window.matchMedia?.('(pointer: coarse)').matches) {
+    if (!coarseQuery?.matches) {
       const keyWidth=Math.min(25,laneWidth*.55);
       ctx.fillStyle='rgba(247,246,239,.94)';roundRect(x-keyWidth/2,hitY+27,keyWidth,23,3);ctx.fill();
       ctx.fillStyle='#2b3340';ctx.font='700 12px "Microsoft YaHei",sans-serif';
@@ -658,7 +695,17 @@ function renderStage(songMs) {
   }
   ctx.restore();
 }
+function stageIsVisible() {
+  return !document.hidden && $('homeView')?.hidden !== false && $('libraryView')?.hidden !== false;
+}
+function scheduleStageFrame() {
+  if (stageFrameQueued || !stageIsVisible()) return;
+  stageFrameQueued=true;
+  requestAnimationFrame(frame);
+}
 function frame() {
+  stageFrameQueued=false;
+  if (!stageIsVisible()) return;
   let now = isPlaying ? songTime() : previewMs;
   if (isPlaying) {
     const previousMisses = session.misses;
@@ -667,8 +714,8 @@ function frame() {
     if (now >= endMs) { completePass(); now = isPlaying ? songTime() : endMs; }
     updateStats();
   }
-  updateTime(now); renderStage(now);
-  requestAnimationFrame(frame);
+  renderStage(now); updateTime(now);
+  scheduleStageFrame();
 }
 
 els.theme.addEventListener('change',() => { applyTheme(els.theme.value); els.theme.blur(); });
@@ -839,10 +886,11 @@ window.addEventListener('romm:select-song',event=>{ if (event.detail?.status ===
 window.addEventListener('romm:show-home',()=>{ if (isPlaying) pause(); if (playPending) stopAudio(); setDrawerOpen(false); });
 window.addEventListener('romm:home-demo',useDemo);
 window.addEventListener('romm:open-settings',()=>{ setDrawerOpen(true); els.drawerClose.focus(); });
+window.addEventListener('romm:practice-visible',scheduleStageFrame);
 window.addEventListener('keyup',event=>releaseInput('key:'+event.code));
 window.addEventListener('blur',()=>{ if (playPending) stopAudio(); if (isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); setMessage('窗口失去焦点，练习已暂停。'); } });
-document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); } });
+document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) { pause(); releaseHeldAt(previewMs); updateStats(); } if (!document.hidden) scheduleStageFrame(); });
 
 renderKeys(); updateMeta(); refreshRangeUi(); updateStats(); updateTime(0);
 replaceAudio(makeDemoAudio(), 'demo');
-requestAnimationFrame(frame);
+scheduleStageFrame();
