@@ -3,6 +3,7 @@ import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
 import { localAudioStore } from './local-audio.js';
+import { stageLayout } from './stage-layout.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -556,8 +557,7 @@ function drawNote(x, y, radius, isHold) {
 function renderStage(songMs) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1,2);
-  // The application can rotate its viewport on a portrait phone; client
-  // dimensions remain in canvas coordinates while the bounding box swaps axes.
+  // Use the canvas's layout size so the drawing follows the available stage.
   const w = canvas.clientWidth ?? rect.width, h = canvas.clientHeight ?? rect.height;
   if (!w || !h) return;
   if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)) {
@@ -565,16 +565,16 @@ function renderStage(songMs) {
   }
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
-  const usable = Math.min(w * .78, 1050), left = (w - usable) / 2, laneWidth = usable / 6, hitY = h - 120;
-  const spawnY = Math.min(142,hitY - 160);
-  const travel = 2200 / scrollRate;
+  const portraitPhone=window.matchMedia?.('(orientation:portrait) and (max-width:600px)').matches;
+  const {left,laneWidth,hitY,spawnY,clipTop,travelMs}=stageLayout(w,h,portraitPhone);
+  const travel = travelMs / scrollRate;
   const pxPerMs = (hitY - spawnY) / travel;
   const showTime = songMs - offset * rate;
   const center = lane => left + lane * laneWidth + laneWidth / 2;
   const radius = Math.min(23,laneWidth * .25);
   paintBackdrop(ctx,currentTheme,w,h);
-  // Keep entering notes below the toolbar while leaving the HUD unobstructed.
-  ctx.save(); ctx.beginPath(); ctx.rect(0,72,w,Math.max(0,h-72)); ctx.clip();
+  // Keep entering notes clear of the toolbar and the portrait score display.
+  ctx.save(); ctx.beginPath(); ctx.rect(0,clipTop,w,Math.max(0,h-clipTop)); ctx.clip();
 
   for (let lane=0;lane<6;lane++) {
     const x = center(lane);

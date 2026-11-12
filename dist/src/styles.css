@@ -475,7 +475,7 @@ body { min-width:0; }
   .touch-controls button { min-width:0; border:0; border-radius:16px; background:transparent; touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; }
   .touch-controls button:active { background:linear-gradient(0deg,rgba(239,225,181,.16),transparent); }
 }
-@media (orientation:landscape) and (max-height:600px), (orientation:portrait) and (max-width:600px) {
+@media (orientation:landscape) and (max-height:600px) {
   .game-frame,.app-shell { min-height:0; height:100vh; height:100dvh; }
   .topbar { height:48px; padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); gap:8px; }
   .brand { min-width:0; }.brand-copy,.brand-emblem { display:none; }
@@ -490,10 +490,26 @@ body { min-width:0; }
   .stage-wrap[data-theme].with-player { width:calc(100% - 190px); }.online-panel { top:90px; right:8px; width:175px; padding:6px; }.online-panel iframe { width:100%; height:100px; }.online-help { display:none; }
 }
 
-/* Keep the application landscape even when a phone's browser stays portrait. */
+/* Portrait phones keep the stage tall and give the six lanes room to touch. */
 @media (orientation:portrait) and (max-width:600px) {
-  html,body { width:100%; height:100%; overflow:hidden; }
-  .app-viewport { display:block; position:fixed; top:0; left:100vw; width:100vh; height:100vw; width:100dvh; height:100dvw; transform:rotate(90deg); transform-origin:top left; overflow:hidden; }
-  .game-frame,.app-shell { height:100%; min-height:0; }
-  .tools-drawer:not(.home-drawer) { width:min(610px,calc(100% - 16px)); }
+  html,body { width:100%; min-height:100%; overflow:hidden; }
+  .game-frame,.app-shell { min-height:0; height:100vh; height:100dvh; }
+  .topbar { height:94px; display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:46px 42px; gap:0; padding:0 14px 6px; }
+  .topbar .brand { display:none; }.header-actions { grid-column:2; grid-row:1; gap:7px; }
+  .header-actions .library-open { display:grid; place-items:center; width:34px; height:34px; padding:0; font-size:19px; line-height:1; }
+  .header-actions .library-open span,.tools-label { display:none; }.tools-orb { width:34px; height:34px; }
+  .top-transport { grid-column:1 / -1; grid-row:2; display:flex; gap:10px; width:100%; }
+  .play-button { min-width:98px; height:36px; }.reset-button { width:36px; min-width:36px; height:36px; }
+  .timeline { display:block; flex:1; min-width:0; }.timeline-labels { margin-bottom:0; font-size:10px; }
+  .card-head { z-index:11; top:8px; left:15px; right:145px; }.track-heading { max-width:100%; }.track-heading h1 { font-size:14px; }.track-meta { margin-top:3px; gap:5px; font-size:10px; white-space:nowrap; overflow:hidden; }.theme-picker { display:none; }
+  .completion-track { top:93px; }.stage-top { top:102px; left:15px; right:15px; }.performance-display strong { font-size:15px; }.performance-display em { font-size:11px; }
+  .combo-display { top:0; }.combo-display strong { font-size:25px; }.stage-status { font-size:10px; }.stage-mode { display:none; }
+  .under-stage,.stage-foot { display:none; }.stage-hint { top:42%; }.feedback { top:62%; }.message { bottom:8px; max-width:94%; font-size:11px; white-space:normal; }
+  .touch-controls { width:94%; height:180px; bottom:30px; }
+  .tools-drawer:not(.home-drawer) { top:54px; right:10px; width:calc(100% - 20px); max-height:calc(100% - 64px); }
+  .stage-wrap[data-theme].with-player { width:100%; height:calc(100% - 150px); }
+  .online-panel:not([hidden]) { top:auto; bottom:0; left:0; right:0; width:100%; height:150px; display:grid; grid-template-columns:minmax(190px,1fr) minmax(0,.7fr); grid-template-rows:auto 1fr auto; gap:3px 10px; padding:8px 12px; }
+  .online-panel-head { grid-column:2; grid-row:1; }.online-panel p:not(.online-help) { grid-column:2; grid-row:2; margin:0; overflow:hidden; }.online-panel a { grid-column:2; grid-row:3; }.online-help { display:none; }
+  #youtubeMount { grid-column:1; grid-row:1 / 4; min-width:0; }.online-panel iframe { width:100%; height:132px; }
+  .workspace:has(.with-player) .message { bottom:158px; }
 }
