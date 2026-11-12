@@ -12,3 +12,13 @@
   .play-button{min-width:88px;padding:0 8px;font-size:11px}.reset-button{width:32px;min-width:32px}.timeline{min-width:38px}.game-frame:has(.result-open:not([hidden])) .card-head{right:180px}.track-meta{flex-wrap:nowrap}.track-meta span{flex-shrink:0}.track-meta span:first-child{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}.audio-mode-badge{max-width:115px;font-size:9px}.result-open{padding:0}.practice-result{padding:18px 20px 20px}.result-head h2{font-size:21px}.result-stats strong{font-size:16px}.library-list-controls{gap:5px}.library-filter select{max-width:135px;padding:5px 20px 5px 8px;font-size:11px}
 }
 @media (orientation:portrait) and (max-width:360px){.play-button{min-width:36px;width:36px;padding:0}.play-button #playText{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.quick-seek{width:28px}.quick-range-toggle{width:30px}.library-footer,.library-search{gap:6px}.library-search input{font-size:13px}.library-favorite{width:38px;height:38px;font-size:20px}.library-start{min-width:116px;gap:6px;padding-right:9px}}
+
+/* The stage themes use a dark upper field and a luminous elemental horizon. */
+.stage-wrap[data-theme="wind"]{background:radial-gradient(ellipse at 50% 110%,#25efdb 0,transparent 55%),linear-gradient(180deg,#101c3f 0%,#073950 48%,#148c90 100%)}
+.stage-wrap[data-theme="geo"]{background:radial-gradient(ellipse at 50% 110%,#ffca55 0,transparent 55%),linear-gradient(180deg,#283955 0%,#4e4650 48%,#b87541 100%)}
+.stage-wrap[data-theme="electro"]{background:radial-gradient(ellipse at 50% 110%,#f2a3ff 0,transparent 55%),linear-gradient(180deg,#171f50 0%,#302469 48%,#8052bb 100%)}
+.stage-wrap[data-theme="hydro"]{background:radial-gradient(ellipse at 50% 110%,#16edff 0,transparent 55%),linear-gradient(180deg,#121e43 0%,#173c7e 50%,#168fe1 100%)}
+.stage-wrap[data-theme="pyro"]{background:radial-gradient(ellipse at 50% 110%,#ff9b35 0,transparent 55%),linear-gradient(180deg,#293852 0%,#59414f 48%,#e65e4c 100%)}
+.stage-wrap[data-theme="dendro"]{background:radial-gradient(ellipse at 50% 110%,#8aff79 0,transparent 55%),linear-gradient(180deg,#142a4a 0%,#1b5361 49%,#31bb84 100%)}
+.stage-wrap[data-theme="dream"]{background:radial-gradient(ellipse at 50% 110%,#d3ff82 0,transparent 55%),linear-gradient(180deg,#30466a 0%,#255567 49%,#76c97c 100%)}
+.stage-wrap[data-theme="frost"]{background:radial-gradient(ellipse at 50% 110%,#25f2ca 0,transparent 55%),linear-gradient(180deg,#071a30 0%,#124759 50%,#18aa9a 100%)}

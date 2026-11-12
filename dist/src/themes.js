@@ -4,14 +4,14 @@ const palette = (name, motif, accent, tap, hold, shape = 'circle') =>
 
 export const THEMES = Object.freeze({
   base: palette('基础主题', 'star', '#ead49a', ['#fff0c4','#efb44f','#c88c3d'], ['#ded2ff','#9479e8','#7256c1']),
-  wind: palette('风与自由', 'wind', '#a6e8d1', ['#edfff1','#80dfc2','#438f89'], ['#e5fdff','#78b8d3','#4f7ea4']),
+  wind: palette('风与自由', 'wind', '#a6f7e6', ['#eafff7','#73e4da','#209f9f'], ['#fff9c0','#ffd94a','#dbac1d']),
   geo: palette('岩与契约', 'geo', '#f2cb83', ['#fff1c4','#e8b85c','#a76c31'], ['#ffebbc','#c9955c','#845433'], 'diamond'),
-  electro: palette('雷与永恒', 'electro', '#d8b6ff', ['#f8eaff','#c69af1','#7950ae'], ['#ffddf8','#e288c7','#a35598'], 'hexagon'),
+  electro: palette('雷与永恒', 'electro', '#e9c2ff', ['#f8eaff','#ab9df1','#6758a8'], ['#ffddf8','#e99adb','#b45aab']),
   hydro: palette('水与正义', 'hydro', '#a3dfff', ['#eaffff','#8bd6f4','#438aa9'], ['#e7edff','#91aef1','#596dc0']),
-  pyro: palette('火与战争', 'pyro', '#ffc49c', ['#fff2d0','#f5a260','#b75337'], ['#ffe2d7','#e77a67','#a9414d']),
-  dendro: palette('草与智慧', 'dendro', '#c8e998', ['#f5ffcf','#b2d874','#658e4c'], ['#e7ffe7','#86c997','#4d8d74']),
-  dream: palette('静思浮梦', 'dream', '#e7f4bf', ['#fffedb','#d6e9a2','#99b26d'], ['#fff4d8','#d9c596','#ab9065']),
-  frost: palette('霜月的祷言', 'frost', '#d7e9ff', ['#f8fcff','#b5d4f0','#758faf'], ['#f5ebff','#b1b9e9','#737da9'], 'hexagon')
+  pyro: palette('火与战争', 'pyro', '#ffbe7b', ['#fff2bc','#ff9741','#b65322'], ['#fff6a8','#ffcf3e','#d98421'], 'flame'),
+  dendro: palette('草与智慧', 'dendro', '#c1ff9d', ['#e3fff4','#69ddba','#2b9984'], ['#edffbb','#a7db5a','#679f32'], 'heart'),
+  dream: palette('静思浮梦', 'dream', '#d9ffad', ['#f3ffd2','#a5db59','#648f33'], ['#dbfff1','#72dfbd','#39a995'], 'flower'),
+  frost: palette('霜月的祷言', 'frost', '#c8fff0', ['#ecfaff','#a7dcf4','#609fc8'], ['#e5ffc3','#77d6a6','#359d8a'], 'flower')
 });
 
 export function getTheme(id) { return Object.hasOwn(THEMES, id) ? THEMES[id] : THEMES.base; }
@@ -48,12 +48,11 @@ export function paintMotif(ctx, motif, x, y, radius, color, angle = 0) {
       ctx.beginPath(); ctx.moveTo(0,-1); ctx.lineTo(.88,0); ctx.lineTo(0,1); ctx.lineTo(-.88,0); ctx.closePath(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0,-.46); ctx.lineTo(.42,0); ctx.lineTo(0,.46); ctx.lineTo(-.42,0); ctx.closePath(); ctx.fill(); break;
     case 'electro':
-      ctx.beginPath(); ctx.moveTo(.12,-1); ctx.lineTo(-.67,.12); ctx.lineTo(-.10,.12);
-      ctx.lineTo(-.24,1); ctx.lineTo(.69,-.25); ctx.lineTo(.12,-.25); ctx.closePath(); ctx.fill(); break;
+      for(let i=0;i<3;i++) {ctx.save();ctx.rotate(i*Math.PI*2/3);ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(-.22,-.42,.05,-.9,.45,-.8);ctx.bezierCurveTo(.8,-.72,.75,-.2,.28,-.12);ctx.bezierCurveTo(.14,-.11,.06,-.04,0,0);ctx.fill();ctx.restore();} break;
     case 'hydro':
-      ctx.beginPath(); ctx.moveTo(0,-1); ctx.bezierCurveTo(-.28,-.56,-.75,-.08,-.75,.34);
-      ctx.bezierCurveTo(-.75,1,.75,1,.75,.34); ctx.bezierCurveTo(.75,-.08,.28,-.56,0,-1); ctx.closePath(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(-.18,.3,.2,.7,2.8); ctx.stroke(); break;
+      ctx.lineWidth=.19;ctx.beginPath();ctx.arc(0,0,.78,-Math.PI*.88,Math.PI*.77);ctx.stroke();
+      ctx.beginPath();ctx.arc(.08,.14,.47,-Math.PI*.85,Math.PI*.7);ctx.stroke();
+      ctx.beginPath();ctx.arc(.12,.22,.16,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(-.68,.52,.11,0,Math.PI*2);ctx.fill();break;
     case 'pyro':
       ctx.beginPath(); ctx.moveTo(0,-1); ctx.bezierCurveTo(.13,-.42,.83,-.24,.72,.42);
       ctx.bezierCurveTo(.62,1,-.58,1,-.72,.37); ctx.bezierCurveTo(-.8,-.04,-.45,-.42,-.33,-.62);
@@ -116,6 +115,20 @@ export function paintBackdrop(ctx, theme, w, h) {
     default:
       ctx.beginPath();ctx.arc(w*.5,h*.55,Math.min(w*.21,120),0,Math.PI*2);ctx.stroke();
   }
+  // Architectural silhouettes and a luminous lower border echo the themed
+  // performance screens while leaving the note lanes visually uncluttered.
+  ctx.globalAlpha=.13; ctx.lineWidth=2;
+  const base=h*.98, mid=w*.5, unit=Math.min(w*.065,72);
+  for (let i=-2;i<=2;i++) {
+    const x=mid+i*unit*1.5, tower=unit*(i===0?2.1:1.45);
+    ctx.beginPath();ctx.moveTo(x-unit*.48,base);ctx.lineTo(x-unit*.48,base-tower*.62);
+    ctx.lineTo(x-unit*.62,base-tower*.62);ctx.lineTo(x,base-tower);ctx.lineTo(x+unit*.62,base-tower*.62);
+    ctx.lineTo(x+unit*.48,base-tower*.62);ctx.lineTo(x+unit*.48,base);ctx.stroke();
+    ctx.beginPath();ctx.arc(x,base-unit*.36,unit*.20,Math.PI,0);ctx.lineTo(x+unit*.20,base);ctx.stroke();
+  }
+  for(let i=0;i<3;i++) {ctx.beginPath();ctx.moveTo(-20,h*(.84+i*.04));ctx.bezierCurveTo(w*.28,h*(.77+i*.04),w*.68,h*(1.02-i*.025),w+20,h*(.83+i*.045));ctx.stroke();}
+  ctx.globalAlpha=.14;
+  for(let i=0;i<10;i++) paintMotif(ctx,theme.motif,w*(i+.5)/10,h*.975,Math.min(16,w*.018),color,i*.4);
   ctx.restore();
 }
 

@@ -671,6 +671,16 @@ function notePath(x,y,radius,shape) {
   } else if (shape === 'hexagon') {
     for (let i=0;i<6;i++) { const angle=Math.PI/3*i-Math.PI/2, px=x+Math.cos(angle)*radius, py=y+Math.sin(angle)*radius; if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
     ctx.closePath();
+  } else if (shape === 'heart') {
+    ctx.moveTo(x,y-radius*.64);ctx.bezierCurveTo(x-radius*.7,y-radius*1.25,x-radius*1.28,y-radius*.42,x-radius*.85,y+radius*.13);
+    ctx.quadraticCurveTo(x-radius*.5,y+radius*.62,x,y+radius);ctx.quadraticCurveTo(x+radius*.5,y+radius*.62,x+radius*.85,y+radius*.13);
+    ctx.bezierCurveTo(x+radius*1.28,y-radius*.42,x+radius*.7,y-radius*1.25,x,y-radius*.64);ctx.closePath();
+  } else if (shape === 'flower') {
+    for(let i=0;i<80;i++){const a=i*Math.PI*2/80-Math.PI/2, r=radius*(.78+.22*Math.cos(4*a));if(!i)ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);else ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();
+  } else if (shape === 'flame') {
+    ctx.moveTo(x,y-radius);ctx.lineTo(x+radius*.44,y-radius*.45);ctx.lineTo(x+radius*.62,y-radius*.55);
+    ctx.bezierCurveTo(x+radius*1.28,y+radius*.15,x+radius*.72,y+radius,x,y+radius);
+    ctx.bezierCurveTo(x-radius*.72,y+radius,x-radius*1.28,y+radius*.15,x-radius*.62,y-radius*.55);ctx.lineTo(x-radius*.44,y-radius*.45);ctx.closePath();
   } else ctx.arc(x,y,radius,0,Math.PI*2);
 }
 function drawNote(x, y, radius, isHold, compact) {
@@ -682,11 +692,7 @@ function drawNote(x, y, radius, isHold, compact) {
   fill.addColorStop(0,colors[0]);fill.addColorStop(.58,colors[1]);fill.addColorStop(1,colors[2]);
   notePath(x,y,radius*.8,currentTheme.shape);ctx.fillStyle=fill;ctx.fill();
   ctx.lineWidth=1;ctx.strokeStyle=rgba(colors[0],.84);ctx.stroke();
-  if (isHold) {
-    notePath(x,y,radius*.62,currentTheme.shape);ctx.setLineDash([2,2]);
-    ctx.strokeStyle=rgba(colors[0],.78);ctx.stroke();ctx.setLineDash([]);
-  }
-  paintMotif(ctx,currentTheme.motif,x,y,radius*.43,colors[0]);
+  paintMotif(ctx,currentTheme.motif,x,y,radius*.48,colors[0]);
   ctx.restore();
 }
 function renderBackdrop(w,h,dpr) {
@@ -717,7 +723,7 @@ function renderStage(songMs) {
   const pxPerMs = (hitY - spawnY) / travel;
   const showTime = songMs - offset * rate;
   const center = lane => left + lane * laneWidth + laneWidth / 2;
-  const radius = Math.min(23,laneWidth * .25);
+  const radius = compact ? Math.min(23,laneWidth * .27) : Math.min(32,laneWidth * .30);
   renderBackdrop(w,h,dpr);
   // Keep entering notes clear of the toolbar and the portrait score display.
   ctx.save(); ctx.beginPath(); ctx.rect(0,clipTop,w,Math.max(0,h-clipTop)); ctx.clip();
@@ -745,7 +751,7 @@ function renderStage(songMs) {
   }
   for (const group of chords.values()) {
     if (group.count<2 || group.y < -30 || group.y > h+20) continue;
-    ctx.strokeStyle=rgba(currentTheme.accent,.82); ctx.lineWidth=3;
+    ctx.strokeStyle='rgba(255,251,205,.90)'; ctx.lineWidth=5;
     ctx.beginPath();ctx.moveTo(center(group.min),group.y);ctx.lineTo(center(group.max),group.y);ctx.stroke();
   }
 
