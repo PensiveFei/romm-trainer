@@ -20,6 +20,14 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 [![千音习谱演示视频](https://qianyin.fun/demo/qianyin-demo-v2-poster.jpg)](https://qianyin.fun/demo/qianyin-demo-v2.mp4)
 
+<p align="center">
+  <img src="docs/screenshots/home.webp" width="49%" alt="首页：精选曲目与专辑列表">
+  <img src="docs/screenshots/library.webp" width="49%" alt="曲目典藏：150 首曲目与难度选择">
+</p>
+<p align="center">
+  <img src="docs/screenshots/practice.webp" width="72%" alt="练习界面：六轨谱面、完成度与判定反馈">
+</p>
+
 ## 核心功能
 
 - **手动练习**：PC 使用六键键盘，手机可使用六轨触屏，支持单点、同时按和长按。
