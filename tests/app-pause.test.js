@@ -38,7 +38,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     createElement(){ return new FakeElement(); }, createTextNode(text){ return {textContent:text}; },
     addEventListener(){}
   };
-  const settings=new Map();
+  const settings=new Map([['romm-trainer-scroll','0.3']]);
   globalThis.localStorage={ getItem(key){return settings.get(key) ?? null;}, setItem(key,value){settings.set(key,value);} };
   let nextFrame;
   globalThis.requestAnimationFrame=(fn)=>{ nextFrame=fn; return 0; };
@@ -51,6 +51,11 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   }
   globalThis.Audio=FakeAudio;
   await import('../dist/src/app.js');
+  assert.equal(el.scrollSpeed.value, 0.3);
+  assert.equal(el.scrollLabel.textContent, '0.3×');
+  el.scrollSpeed.value='0.4'; el.scrollSpeed.dispatch('input');
+  assert.equal(el.scrollLabel.textContent, '0.4×');
+  assert.equal(settings.get('romm-trainer-scroll'), '0.4');
   const press=(name,code)=>listeners[name].forEach(fn=>fn({code,repeat:false,target:document.body,preventDefault(){}}));
   const flush=()=>new Promise(resolve=>setImmediate(resolve));
 

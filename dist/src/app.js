@@ -53,7 +53,7 @@ try {
   const stored = JSON.parse(localStorage.getItem('romm-trainer-keys') || 'null');
   if (Array.isArray(stored) && stored.length === 6 && new Set(stored).size === 6 && stored.every(k => /^(Key[A-Z]|Digit[0-9])$/.test(k))) keys = stored;
   const savedScroll = Number(localStorage.getItem('romm-trainer-scroll'));
-  if (savedScroll >= 0.7 && savedScroll <= 2) scrollRate = savedScroll;
+  if (savedScroll >= 0.3 && savedScroll <= 2) scrollRate = savedScroll;
   const savedOffset = Number(localStorage.getItem('romm-trainer-offset'));
   if (savedOffset >= -300 && savedOffset <= 300) offset = savedOffset;
 } catch { /* Local settings are optional. */ }
