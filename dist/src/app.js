@@ -1,6 +1,7 @@
 import { demoChart, validateChart, validateRange } from './chart.js';
 import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
+import { isReferenceTheme, paintReferenceNote, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
 import { localAudioStore } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
@@ -704,6 +705,7 @@ function notePath(x,y,radius,shape) {
   } else ctx.arc(x,y,radius,0,Math.PI*2);
 }
 function drawNote(x, y, radius, isHold, compact) {
+  if (paintReferenceNote(ctx, themeId, x, y, radius, isHold)) return;
   const colors=isHold ? currentTheme.hold : currentTheme.tap;
   ctx.save(); ctx.shadowColor=rgba(colors[1],.7); ctx.shadowBlur=compact ? 7 : 13;
   notePath(x,y,radius,currentTheme.shape);ctx.fillStyle=colors[2];ctx.fill();
@@ -716,14 +718,14 @@ function drawNote(x, y, radius, isHold, compact) {
   ctx.restore();
 }
 function renderBackdrop(w,h,dpr) {
-  if (!backdropCtx) { paintBackdrop(ctx,currentTheme,w,h); return; }
+  if (!backdropCtx) { if (!paintReferenceBackdrop(ctx,themeId,w,h)) paintBackdrop(ctx,currentTheme,w,h); return; }
   const key=[w,h,dpr,themeId].join(':');
   if (key === backdropKey) return;
   backdropKey=key;
   backdropCanvas.width=Math.round(w*dpr); backdropCanvas.height=Math.round(h*dpr);
   backdropCtx.setTransform(dpr,0,0,dpr,0,0);
   backdropCtx.clearRect(0,0,w,h);
-  paintBackdrop(backdropCtx,currentTheme,w,h);
+  if (!paintReferenceBackdrop(backdropCtx,themeId,w,h)) paintBackdrop(backdropCtx,currentTheme,w,h);
 }
 function renderStage(songMs) {
   const compact=!!compactQuery?.matches;
@@ -781,18 +783,24 @@ function renderStage(songMs) {
       const shownHead = Math.min(hitY,headY);
       const top = Math.max(-radius,tailY);
       if (shownHead > top) {
-        const width = radius * 1.25;
-        const ribbon=ctx.createLinearGradient(x-width/2,0,x+width/2,0);
-        ribbon.addColorStop(0,rgba(currentTheme.hold[1],.22));
-        ribbon.addColorStop(.45,rgba(currentTheme.hold[1],.55));
-        ribbon.addColorStop(1,rgba(currentTheme.hold[0],.22));
-        ctx.fillStyle=ribbon;ctx.fillRect(x-width/2,top,width,shownHead-top);
-        ctx.strokeStyle=rgba(currentTheme.hold[0],.52);ctx.lineWidth=1;
-        ctx.beginPath();ctx.moveTo(x-width/2,top);ctx.lineTo(x-width/2,shownHead);
-        ctx.moveTo(x+width/2,top);ctx.lineTo(x+width/2,shownHead);ctx.stroke();
+        if (!paintReferenceHold(ctx,themeId,x,top,shownHead,radius)) {
+          const width = radius * 1.25;
+          const ribbon=ctx.createLinearGradient(x-width/2,0,x+width/2,0);
+          ribbon.addColorStop(0,rgba(currentTheme.hold[1],.22));
+          ribbon.addColorStop(.45,rgba(currentTheme.hold[1],.55));
+          ribbon.addColorStop(1,rgba(currentTheme.hold[0],.22));
+          ctx.fillStyle=ribbon;ctx.fillRect(x-width/2,top,width,shownHead-top);
+          ctx.strokeStyle=rgba(currentTheme.hold[0],.52);ctx.lineWidth=1;
+          ctx.beginPath();ctx.moveTo(x-width/2,top);ctx.lineTo(x-width/2,shownHead);
+          ctx.moveTo(x+width/2,top);ctx.lineTo(x+width/2,shownHead);ctx.stroke();
+        }
       }
     }
+    if (isReferenceTheme(themeId) && note.holdMs > 0 && tailY >= clipTop-radius && tailY <= h+radius) {
+      drawNote(x,tailY,radius,true,compact);
+    }
     if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0,compact);
+    else if (isReferenceTheme(themeId) && note.status === 'holding') drawNote(x,Math.min(hitY,headY),radius,true,compact);
   }
 
   ctx.save();
