@@ -9,6 +9,7 @@ const albumArt={Encounter2:'../encounter-covers/01-qkfbm4fgdarh1.png',NodKrai3:'
 const heroIds=['Encounter2','NodKrai3','Magic','Mondstadt','Sumeru'];
 const featuredIds=['_GMusic106','_GMusic104','_GMusic16'];
 let catalog=null, heroIndex=0, expanded=true, settingsFromHome=false;
+let lastHeroInteraction=Date.now();
 
 function el(tag,className,text) {
   const node=document.createElement(tag);
@@ -51,7 +52,7 @@ function renderHero() {
     const candidate=catalog.groups.find(item=>item.id===groupId);
     const button=el('button','hero-dot');button.type='button';
     button.setAttribute('aria-label',`展示 ${candidate?.title || '专辑'}`);button.setAttribute('aria-pressed',String(index===heroIndex));
-    button.addEventListener('click',()=>{heroIndex=index;renderHero();});pages.append(button);
+    button.addEventListener('click',()=>{heroIndex=index;lastHeroInteraction=Date.now();renderHero();pages.children[index]?.focus();});pages.append(button);
   });
 }
 function makeRecord({title,image,kind,onClick,count}) {
@@ -121,6 +122,12 @@ $('homeHeroOpen').addEventListener('click',()=>openLibrary({groupId:heroIds[hero
 $('homeExpand').addEventListener('click',()=>{expanded=!expanded;renderAlbums();});
 window.addEventListener('romm:show-home',()=>{home.hidden=false;home.inert=false;gameFrame.inert=true;renderAlbums();$('homeResume').focus();});
 window.addEventListener('romm:favorites-changed',renderAlbums);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)lastHeroInteraction=Date.now();});
+setInterval(()=>{
+  const hero=document.querySelector('.home-hero');
+  if(!catalog || document.hidden || home.hidden || home.inert || help.open || hero.matches(':hover, :focus-within') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || Date.now()-lastHeroInteraction<6000)return;
+  heroIndex=(heroIndex+1)%heroIds.length;lastHeroInteraction=Date.now();renderHero();
+},6000);
 gameFrame.inert=true;
 
 try {
