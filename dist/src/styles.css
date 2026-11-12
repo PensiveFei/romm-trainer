@@ -469,14 +469,7 @@ body { min-width:0; }
 
 /* Touch lanes follow the same six centers as the canvas and support multi-touch. */
 .touch-controls { display:none; }
-.orientation-notice { display:none; }
-@media (pointer:coarse) and (orientation:portrait) and (max-width:900px) {
-  .orientation-notice { position:fixed; z-index:1000; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:#f5ecd9; background:linear-gradient(165deg,#1c1a2b,#41304e); font-family:"Microsoft YaHei",sans-serif; }
-  .orientation-notice span { font-size:60px; line-height:1; color:#e5d2a7; }
-  .orientation-notice strong { font-size:22px; letter-spacing:.1em; }
-  .orientation-notice small { color:#d4c9c8; font-size:14px; }
-}
-@media (pointer:coarse) and (orientation:landscape), (orientation:landscape) and (max-height:600px) {
+@media (pointer:coarse), (orientation:landscape) and (max-height:600px) {
   .touch-controls { position:absolute; z-index:6; left:50%; bottom:30px; transform:translateX(-50%); width:min(78%,1050px); height:150px; display:grid; grid-template-columns:repeat(6,1fr); touch-action:none; }
   .touch-controls button { min-width:0; border:0; border-radius:16px; background:transparent; touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; }
   .touch-controls button:active { background:linear-gradient(0deg,rgba(239,225,181,.16),transparent); }
