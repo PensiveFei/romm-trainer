@@ -12,6 +12,10 @@ Repertoire of Myriad Melodies Trainer
 
 Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of Myriad Melodies, aiming to provide players with a professional score-practice tool.
 
+## 演示视频 | Demo Video
+
+[![千音习谱演示视频](https://qianyin.fun/demo/qianyin-demo-poster-1s.jpg)](https://qianyin.fun/demo/qianyin-demo.mp4)
+
 ## 核心功能
 
 - **手动练习**：PC 使用六键键盘，手机横屏后可使用六轨触屏，支持单点、同时按和长按。

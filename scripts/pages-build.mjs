@@ -37,9 +37,7 @@ async function run() {
   if (await exists(OVERLAY)) {
     for (const name of await fs.readdir(OVERLAY)) {
       const from = path.join(OVERLAY, name);
-      const stat = await fs.stat(from);
-      if (!stat.isFile()) continue;
-      await fs.copyFile(from, path.join(OUT, name));
+      await fs.cp(from, path.join(OUT, name), { recursive: true, force: true });
       overlaid.push(name);
     }
   }
