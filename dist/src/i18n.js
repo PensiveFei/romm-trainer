@@ -10,7 +10,7 @@ const translations = {
   '后退 10 秒':'Back 10 seconds', '前进 10 秒':'Forward 10 seconds', '设置练习区间':'Set practice section',
   '当前位置设为 A':'Set A to current time', '当前位置设为 B':'Set B to current time', '恢复全曲':'Use full song',
   '查看上一轮成绩':'View last result', '成绩':'Results', '示范节拍':'Demo metronome', '节拍伴奏 · 无原曲':'Metronome · No song',
-  '在线原声 · 加载中':'Online audio · Loading', '本地音频 · 加载中':'Local audio · Loading', '本地音频不可用':'Local audio unavailable', '按键音量':'Key sound volume',
+  '在线原声 · 加载中':'Online audio · Loading', '本地音频 · 加载中':'Local audio · Loading', '本地音频不可用':'Local audio unavailable', '按键音量':'Key sound volume', '背景音乐音量':'Background music volume',
   '练习结果':'Practice Result', '关闭成绩':'Close result', '最高连击':'Max Combo', '谱面状态':'Chart status',
   '全部状态':'All statuses', '可练习':'Playable', '谱面待核对':'Needs review', '暂缺谱面':'Unavailable',
   '千音习谱':'ROMM Trainer', '练习模式':'Practice Mode', '开始练习':'Start Practice', '继续练习':'Resume Practice',

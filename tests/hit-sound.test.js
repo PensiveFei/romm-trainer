@@ -14,13 +14,28 @@ test('manual hit sound unlocks once, supports overlapping presses, and respects 
   }
   const sound=createHitSound({storage,AudioContextClass:FakeContext});
   assert.equal(sound.getVolume(),30);
-  sound.play();assert.equal(context,undefined,'no sound is synthesized without a user gesture');
   sound.unlock();assert.equal(context.unlocks,1);
+  assert.equal(context.notes.length,0,'unlocking is silent until a manual press');
   sound.play();sound.play();assert.equal(context.notes.length,4,'two presses may overlap');
   sound.setVolume(0);sound.play();assert.equal(context.notes.length,4);
   assert.equal(values.get(HIT_VOLUME_KEY),'0');
   assert.equal(createHitSound({storage,AudioContextClass:FakeContext}).getVolume(),0);
   sound.setVolume(150);assert.equal(sound.getVolume(),100);
+});
+
+test('a manual press resumes an interrupted audio context',async()=>{
+  let context;
+  class FakeContext {
+    constructor(){context=this;this.state='running';this.currentTime=1;this.sampleRate=48000;this.destination={};this.notes=0;}
+    createGain(){return {gain:{value:0,setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+    createBuffer(){return {};}
+    createBufferSource(){return {connect(){},disconnect(){},start(){}};}
+    createOscillator(){return {frequency:{setValueAtTime(){}},connect(){},disconnect(){},start:()=>this.notes++,stop(){}};}
+    async resume(){this.state='running';}
+  }
+  const sound=createHitSound({AudioContextClass:FakeContext});
+  sound.unlock();context.state='interrupted';sound.play();await Promise.resolve();
+  assert.equal(context.notes,2);
 });
 
 test('unavailable audio and blocked storage do not prevent practice',()=>{

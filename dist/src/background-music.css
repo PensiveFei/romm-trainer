@@ -1,0 +1,8 @@
+.background-music-toggle{position:relative;flex:none;display:grid;place-items:center;border:0;background:transparent;color:#f3e7d5;font:700 29px Georgia,serif;cursor:pointer}
+.background-music-toggle i{position:absolute;right:2px;bottom:4px;width:8px;height:8px;border:1px solid #302a39;border-radius:50%;background:#9b9297}
+.background-music-toggle[data-state="playing"] i{background:#f5d38d;box-shadow:0 0 7px #f1cb7d}
+.background-music-toggle[data-state="error"] i{background:#de8d82}
+.background-music-toggle:disabled{opacity:.5}
+.library-music-toggle{width:40px;height:40px}
+@media(max-width:650px){.library-header-side{gap:8px}.library-music-toggle{width:34px;height:34px;font-size:25px}}
+@media(orientation:portrait) and (max-width:360px){.home-nav{gap:3px}.home-nav .background-music-toggle{width:27px;font-size:22px}.home-nav .home-icon{width:27px}.home-nav .home-return{width:34px;height:34px}.home-brand{gap:5px}.home-emblem{width:34px;height:34px}}

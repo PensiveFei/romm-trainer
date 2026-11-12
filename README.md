@@ -25,6 +25,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **手动练习**：PC 使用六键键盘，手机可使用六轨触屏，支持单点、同时按和长按。
 - **界面语言**：在设置中切换简体中文、English 和日本語，选择保存在当前浏览器。
 - **开始倒计时**：开始或继续练习前显示 3 秒倒计时，可随时取消。
+- **背景音乐**：首页和曲库播放《梦之咏叹》的[原神官方音源](https://www.bilibili.com/audio/au1659248)，可在顶部关闭、在设置中调节音量；进入练习或试听其他曲目时暂停。浏览器限制自动播放时，点击音乐按钮即可尝试播放。
 - **片段循环**：设置 A–B 练习区间，循环默认关闭，可手动开启；每轮开始前保留一小段引导时间。
 - **进度跳转**：拖动顶部进度条，或使用左右方向键、手机快捷按钮快退或快进 10 秒；手机也可从当前位置设置 A、B 点。跳转后本轮完成度从当前位置重新计算。
 - **练习设置**：调整音乐播放速度、音符下落速度、判定范围、时间偏移和按键音量。手动按键时可听到合成琴音，音量设为零即可关闭。
@@ -40,6 +41,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Manual practice**: Use six keyboard lanes on PC or touch the lanes on mobile, including taps, simultaneous notes, and holds.
 - **Interface language**: Switch between Simplified Chinese, English, and Japanese in settings; the choice is saved in your browser.
 - **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
+- **Background music**: The home screen and library play the [official Dream Aria recording](https://www.bilibili.com/audio/au1659248). Use the top music button to turn it off and settings to adjust its volume; it pauses during practice and song previews. If autoplay is blocked, click the music button to start it.
 - **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
 - **Seeking**: Drag the timeline or use the arrow keys or mobile buttons to seek by ten seconds. Mobile controls can also set A and B from the current position; seeking restarts scoring from that position.
 - **Practice settings**: Adjust playback rate, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.

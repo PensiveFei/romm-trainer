@@ -36,7 +36,9 @@ function updateFavoriteButton() {
   favoriteButton.title=marked?tr('已收藏 · 点击取消','Favorited · click to remove'):tr('收藏曲目','Add to favorites');
 }
 function renderDetails() {
+  const hadPreview=!!detail.querySelector('.library-audio-mount iframe');
   detail.replaceChildren();
+  if (hadPreview) window.dispatchEvent(new Event('romm:audio-preview-end'));
   start.disabled=!selected || selected.status!=='ready';
   updateFavoriteButton();
   if (!selected) { detail.append(element('div','library-empty',tr('选择一首曲目','Choose a song'))); return; }
@@ -74,10 +76,11 @@ function renderDetails() {
     const link=element('a','',tr('在 YouTube 打开 ↗','Open on YouTube ↗'));link.href=`https://www.youtube.com/watch?v=${song.audio.videoId}&t=${Math.max(0,Math.floor(song.audio.startSeconds))}s`;link.target='_blank';link.rel='noopener noreferrer';
     const mount=element('div','library-audio-mount');mount.hidden=true;
     toggle.addEventListener('click',()=>{
-      if (!mount.hidden) {mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');return;}
+      if (!mount.hidden) {mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
       const frame=element('iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
       frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;
       frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;
+      window.dispatchEvent(new Event('romm:audio-preview-start'));
       mount.append(frame);mount.hidden=false;toggle.textContent=tr('收起试听','Close preview');toggle.setAttribute('aria-expanded','true');
       mount.scrollIntoView({block:'nearest'});
     });

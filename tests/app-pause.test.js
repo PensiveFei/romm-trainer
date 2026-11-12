@@ -59,6 +59,14 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     pause(){ this.paused=true; }
   }
   globalThis.Audio=FakeAudio;
+  let soundOscillators=0;
+  globalThis.AudioContext=class {
+    constructor(){this.state='running';this.currentTime=0;this.sampleRate=48000;this.destination={};}
+    createGain(){return {gain:{value:0,setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+    createBuffer(){return {};}
+    createBufferSource(){return {connect(){},disconnect(){},start(){}};}
+    createOscillator(){return {frequency:{setValueAtTime(){}},connect(){},disconnect(){},start(){soundOscillators++;},stop(){}};}
+  };
   await import('../dist/src/app.js');
   assert.equal(frameRequests,0, 'the hidden practice stage does not keep rendering behind the home page');
   el.homeView.hidden=true;
@@ -195,7 +203,9 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   // Two independent fingers can hit a chord and sustain a hold until release.
   const touch=(lane,name,pointerId)=>el['touchLane'+lane].dispatch(name,{pointerId,pointerType:'touch',button:0,preventDefault(){}});
   testAudio.currentTime=7;
+  const soundsBeforeChord=soundOscillators;
   touch(0,'pointerdown',11); touch(5,'pointerdown',12);
+  assert.equal(soundOscillators-soundsBeforeChord,4,'both fingers receive their own manual sound');
   assert.equal(el.statHits.children[0].textContent.trim(),'2');
   touch(0,'pointerup',11); touch(5,'pointerup',12);
   testAudio.currentTime=10;
