@@ -20,7 +20,7 @@
         <button class="play-button" id="playButton" type="button"><span class="play-icon" id="playIcon">▶</span><span id="playText">开始练习</span></button>
         <div class="timeline">
           <div class="timeline-labels"><span id="elapsed">00:00</span><span id="duration">00:32</span></div>
-          <div class="progress-track"><div id="progressFill"></div></div>
+          <div class="progress-track"><div id="progressFill"></div><input id="timelineSeek" type="range" min="0" max="32000" step="100" value="0" aria-label="播放进度" aria-valuetext="00:00" title="拖动调整进度；左右方向键快退或快进 10 秒"></div>
         </div>
         <button class="reset-button" id="restartButton" type="button" title="回到片段起点"><span aria-hidden="true">↻</span> 重新开始</button>
       </div>

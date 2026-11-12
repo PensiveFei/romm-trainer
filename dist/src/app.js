@@ -11,7 +11,7 @@ const els = {
   scroll: $('scrollSpeed'), scrollLabel: $('scrollLabel'), offset: $('offset'), speedLabel: $('speedLabel'),
   hitWindow: $('hitWindow'), hitWindowLabel: $('hitWindowLabel'),
   rateButtons: $('rateButtons'), keys: $('keyBindings'), keyHelp: $('keyHelp'), elapsed: $('elapsed'),
-  duration: $('duration'), stageTime: $('stageTime'), fill: $('progressFill'), hits: $('statHits'),
+  duration: $('duration'), stageTime: $('stageTime'), fill: $('progressFill'), timelineSeek: $('timelineSeek'), hits: $('statHits'),
   performanceScore: $('performanceScore'), completionValue: $('completionValue'), completionFill: $('completionFill'), completionTrack: $('completionTrack'),
   combo: $('statCombo'), timing: $('statTiming'), miss: $('statMiss'), title: $('trackTitle'), artist: $('trackArtist'),
   info: $('trackInfo'), sideTitle: $('sideTitle'), sideArtist: $('sideArtist'), sideBpm: $('sideBpm'),
@@ -37,6 +37,7 @@ let startMs = 0, endMs = chart.durationMs;
 let session;
 let audioReady = false, isPlaying = false, hasStarted = false, ending = false, audioUrl = null;
 let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
+let seeking = false;
 let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
 const held = new Set();
 let themeId = 'base', currentTheme = getTheme(themeId);
@@ -135,6 +136,7 @@ function updateMeta() {
   els.info.textContent = bpm;
   els.sideBpm.textContent = bpm;
   els.duration.textContent = format(chart.durationMs);
+  if (els.timelineSeek) els.timelineSeek.max=String(chart.durationMs);
   els.sourceTag.textContent = sourceType === 'demo' ? '示范谱' : sourceType === 'song' ? '传说 · ' + (currentSong.levels?.[3] || '—') + ' 星' : '本地谱';
 }
 function songTime() { return Math.max(0, (audio.currentTime - (sourceType === 'song' ? musicStart : 0)) * 1000); }
@@ -171,10 +173,25 @@ function updateStats() {
   els.timing.textContent = session.early + ' / ' + session.late;
   els.miss.textContent = session.misses;
 }
-function updateTime(ms) {
+function updateTime(ms, fromSeek = false) {
+  if (seeking && !fromSeek) return;
   els.elapsed.textContent = format(ms);
   els.stageTime.textContent = format(ms) + ' / ' + format(chart.durationMs);
   els.fill.style.width = Math.max(0,Math.min(100,ms / chart.durationMs * 100)) + '%';
+  if (els.timelineSeek) { els.timelineSeek.value=String(ms);els.timelineSeek.setAttribute('aria-valuetext',format(ms,true)); }
+}
+function seekPractice(requestedMs) {
+  seeking=false;
+  if (!audioReady) { updateTime(previewMs);setMessage('音源尚未就绪，暂时无法调整进度。');return; }
+  const target=Math.max(startMs,Math.min(endMs,requestedMs));
+  if (!Number.isFinite(target)) {updateTime(previewMs);return;}
+  if (playPending) stopAudio();
+  try {seekSong(target);} catch {updateTime(previewMs);setMessage('当前音源暂时无法跳转，请稍后重试。');return;}
+  held.clear();hitEffects.length=0;ending=false;
+  session=new Judge(chart,target,endMs,rate,offset,hitWindowMs);
+  previewMs=target;hasStarted=true;
+  updateStats();updateTime(target);
+  setMessage('已跳转至 '+format(target,true)+'；本轮完成度从当前位置重新计算。',true);
 }
 function refreshRangeUi() {
   const max = chart.durationMs / 1000;
@@ -577,6 +594,9 @@ els.drawerToggle.addEventListener('click',() => setDrawerOpen(els.drawer.hidden)
 els.drawerClose.addEventListener('click',() => { setDrawerOpen(false); els.drawerToggle.focus(); });
 els.play.addEventListener('click',togglePlay);
 els.restart.addEventListener('click',() => { resetSession(); setMessage('已回到片段起点。',true); });
+els.timelineSeek?.addEventListener('input',()=>{seeking=true;updateTime(Number(els.timelineSeek.value),true);});
+els.timelineSeek?.addEventListener('change',()=>seekPractice(Number(els.timelineSeek.value)));
+els.timelineSeek?.addEventListener('keydown',event=>{if(event.code==='ArrowLeft'||event.code==='ArrowRight'){event.preventDefault();event.stopPropagation();seekPractice(Number(els.timelineSeek.value)+(event.code==='ArrowLeft'?-10000:10000));}});
 els.start.addEventListener('input',handleRange);
 els.end.addEventListener('input',handleRange);
 els.loop.addEventListener('change',() => { if (isPlaying) pause(); resetSession(); });
@@ -644,6 +664,7 @@ window.addEventListener('keydown',(event) => {
   if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }
   if ($('homeView')?.hidden === false) return;
   if (event.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName)) return;
+  if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {event.preventDefault();if (!event.repeat) seekPractice((isPlaying?songTime():previewMs)+(event.code==='ArrowLeft'?-10000:10000));return;}
   if (event.code === 'Space') { event.preventDefault(); if (!event.repeat) togglePlay(); return; }
   const lane=keys.indexOf(event.code);
   if (lane < 0 || event.repeat || !isPlaying) return;

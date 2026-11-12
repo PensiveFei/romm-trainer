@@ -27,7 +27,7 @@ test('pausing a held note keeps it valid while the key remains down', async () =
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect',
     'performanceScore','completionValue','completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose',
     'hitWindow','hitWindowLabel','songButton','songOptions','onlinePanel','songAudioStatus','musicStart',
-    'onlineButton','metronomeButton','youtubePlayer','youtubeMount'];
+    'onlineButton','metronomeButton','youtubePlayer','youtubeMount','timelineSeek'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement(id)]));
   el.startRange.value='0'; el.endRange.value='32'; el.loopToggle.checked=true; el.toolsDrawer.hidden=true;
   const listeners={};
@@ -117,6 +117,20 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   assert.equal(el.performanceScore.textContent,'10');
   assert.equal(el.statHits.children[0].textContent.trim(),'1');
 
+  testAudio.currentTime=10;
+  el.timelineSeek.value='4000';el.timelineSeek.dispatch('input');el.timelineSeek.dispatch('change');
+  assert.equal(testAudio.currentTime,4);
+  assert.equal(el.playText.textContent,'暂停');
+  assert.equal(el.performanceScore.textContent,'0');
+  press('keydown','KeyK');press('keyup','KeyK');
+  assert.equal(el.statHits.children[0].textContent.trim(),'1');
+  el.playButton.dispatch('click');
+  el.timelineSeek.value='8000';el.timelineSeek.dispatch('input');el.timelineSeek.dispatch('change');
+  el.playButton.dispatch('click');await flush();
+  assert.equal(testAudio.currentTime,8);
+  press('keydown','ArrowLeft');
+  assert.equal(testAudio.currentTime,0);
+
   const song = JSON.parse(await readFile(new URL('../dist/data/surasthana-legend.json', import.meta.url), 'utf8'));
   globalThis.fetch = async () => ({ok:true, async json(){return song;}});
   globalThis.location = {origin:'http://localhost'};
@@ -150,6 +164,9 @@ test('pausing a held note keeps it valid while the key remains down', async () =
   youtube.time=2582+5.25+6.1; nextFrame();
   assert.equal(youtube.time,2582+5.25);
   assert.match(el.message.textContent,/上一轮：完成度/);
+  el.timelineSeek.value='5000';el.timelineSeek.dispatch('input');el.timelineSeek.dispatch('change');
+  assert.equal(youtube.time,2582+5.25+5);
+  assert.equal(el.statHits.children[0].textContent.trim(),'0');
   el.toolsToggle.dispatch('click');
   assert.equal(el.playText.textContent,'继续练习');
   const previousPlayer=youtube;
