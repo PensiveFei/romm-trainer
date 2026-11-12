@@ -37,6 +37,17 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 - **Song library**: Browse or search 150 titles by album, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
 - **Accompaniment**: Some songs link to an official online soundtrack; a metronome or user-selected local audio is also available. Alignment with each in-game edit remains provisional.
 
+## 演示视频 | Demo Video
+
+[![千音习谱演示视频](https://qianyin.fun/demo/qianyin-demo-poster.jpg)](https://qianyin.fun/demo/qianyin-demo.mp4)
+
+43 秒操作演示：首页与精选曲目、专辑与收藏、谱面载入、进度条跳转、A–B 片段循环，以及手动演奏的实时反馈。
+
+A 43-second walkthrough: home and featured songs, albums and favorites, chart loading, timeline seeking, A–B section looping, and live feedback while playing manually.
+
+> 视频托管在正式站点 <https://qianyin.fun>，点击封面播放。
+> The video is hosted on <https://qianyin.fun>; click the cover to play.
+
 ## 声明
 
 本项目无盈利，非外挂、非自动演奏工具，纯粹出于热爱。
