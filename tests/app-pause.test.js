@@ -245,6 +245,11 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   assert.equal(el.statHits.children[1].textContent,'/ 231');
   assert.equal(el.onlinePanel.hidden,false);
   assert.match(el.songAudioStatus.textContent,/同步待校准/);
+  assert.equal(el.musicStart.max,'46','the default song uses the duration of its album track');
+  const catalog=JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
+  const catalogSong=catalog.groups.flatMap(group=>group.songs).find(item=>item.id==='_GMusic16');
+  listeners['romm:select-song'].forEach(fn=>fn({detail:catalogSong})); await flush(); await flush();
+  assert.equal(el.musicStart.max,'46','the library song offers the same safe audio offset');
   youtube.getPlaybackRate=()=>1;
   el.rateButtons.dispatch('click',{target:{closest:()=>({dataset:{rate:'0.5'}})}});
   await begin();

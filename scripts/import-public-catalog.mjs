@@ -13,6 +13,9 @@ const [albums, music, scoreAvailability] = unpack(fs.readFileSync(path.join(sour
 const audited = new Map(JSON.parse(fs.readFileSync(path.join(source, 'romm-chart-audit.json'), 'utf8')).map(x => [x.id, x]));
 const chaptersFile = path.join(source, 'romm-chapters.json');
 const chapters = fs.existsSync(chaptersFile) ? JSON.parse(fs.readFileSync(chaptersFile, 'utf8')) : [];
+// Chapter lengths can include video time outside the music. Use the album's
+// 2:21 track duration to bound offsets for Surasthana Fantasia.
+const trackDurationOverrides = new Map([['2SvpviExw1o:2582', 141]]);
 const normalize = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
 const order = ['Encounter2','NodKrai3','Magic','NodKrai2','NodKrai1','Natlan2','Natlan','Mondstadt','Liyue','Inazuma','Sumeru','Fontaine'];
 const covers = {
@@ -80,7 +83,7 @@ for (const groupId of order) {
       validateChart(chart);
       const filename=id+'.json'; fs.writeFileSync(path.join(dest,filename),JSON.stringify(chart)); chartUrl='./data/library/'+filename; ready++;
       const matches=chapters.filter(c => normalize(c.title) === normalize(m.title.en_us) && (c.duration === null || c.duration >= m.duration));
-      if (!audio && matches.length === 1) { const c=matches[0]; audio={videoId:c.videoId,startSeconds:c.start,durationSeconds:c.duration}; }
+      if (!audio && matches.length === 1) { const c=matches[0]; audio={videoId:c.videoId,startSeconds:c.start,durationSeconds:trackDurationOverrides.get(`${c.videoId}:${c.start}`) ?? c.duration}; }
     } else if (status === 'review') pending++; else missing++;
     if (audio) online++;
     const coverKind=encounterCover==='shimmering-voyage-6.jpg'?'soundtrack':null;
