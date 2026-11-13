@@ -54,6 +54,7 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   class FakeAudio {
     constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
     addEventListener(name,fn){ this.listeners[name]=fn; }
+    removeAttribute(name){ if (name === 'src') this.src=''; }
     load(){ this.listeners.loadedmetadata?.(); }
     async play(){ if (this.failNextPlay) { this.failNextPlay=false; throw new Error('playback blocked'); } this.paused=false; }
     pause(){ this.paused=true; }
@@ -301,6 +302,23 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   el.timelineSeek.value='6000';el.timelineSeek.dispatch('change');
   await begin();nextFrame();
   assert.notEqual(el.practiceResult.open,true,'seeking to the end must not reopen an old result');
+
+  // Import a four-key chart, rebind it independently, then return to six keys.
+  const four=JSON.parse(await readFile(new URL('../examples/four-key-chart.json', import.meta.url), 'utf8'));
+  el.chartFile.files=[{size:300,text:async()=>JSON.stringify(four)}];
+  el.chartFile.dispatch('change'); await flush(); await flush();
+  assert.equal(el.keyBindings.children.length,4,el.message.textContent);
+  assert.equal(el.touchLane3.hidden,false); assert.equal(el.touchLane4.hidden,true);
+  assert.deepEqual(el.keyBindings.children.map(button=>button.textContent),['A','S','K','L']);
+  el.keyBindings.children[0].dispatch('click'); press('keydown','KeyQ');
+  assert.deepEqual(JSON.parse(settings.get('romm-trainer-keys-4')),['KeyQ','KeyS','KeyK','KeyL']);
+  el.demoButton.dispatch('click');
+  assert.equal(el.keyBindings.children.length,6); assert.equal(el.touchLane4.hidden,false);
+  assert.equal(el.keyBindings.children[0].textContent,'A');
+  el.chartFile.files=[{size:300,text:async()=>JSON.stringify(four)}];
+  el.chartFile.dispatch('change'); await flush(); await flush();
+  assert.equal(el.keyBindings.children[0].textContent,'Q');
+  el.demoButton.dispatch('click');
 
   // A slow chart read must not replace the later selection or its status message.
   let resolveImport;

@@ -92,7 +92,7 @@ npm test
 
 ## 本地谱面格式
 
-谱面为 UTF-8 JSON，时间单位是毫秒，六个轨道的编号为 0–5。导入谱面后，需选择自行准备的配套音频。
+谱面为 UTF-8 JSON，`laneCount` 支持 4 或 6，轨道编号从 0 到 `laneCount - 1`，时间单位是毫秒。四键默认 A、S、K、L，六键默认 A、S、D、J、K、L；两套键位分别保存。导入谱面后，请选择自行准备的配套音频。可下载[原创四键示例谱](examples/four-key-chart.json)试用。
 
 ```json
 {

@@ -20,6 +20,7 @@ const translations = {
   '拖动调整进度；左右方向键快退或快进 10 秒':'Drag to seek; use the arrow keys to skip 10 seconds',
   '首页':'Home', '全部曲目':'All Songs', '曲谱与练习设置':'Charts and practice settings', '曲谱与设置':'Charts & Settings',
   '谱面练习':'Chart practice', '节拍练习 · 六键':'Rhythm Practice · 6 Keys', '原创示范谱':'Original demo chart',
+  '四键':'4 Keys', '四轨音符练习区':'Four-lane practice area', '仅支持四键或六键谱面。':'Only four- or six-key charts are supported.',
   '六键':'6 Keys', '谱面主题':'Stage Theme', '基础主题':'Default', '风与自由':'Wind and Freedom',
   '岩与契约':'Stone and Contracts', '雷与永恒':'Lightning and Eternity', '水与正义':'Water and Justice',
   '火与战争':'Fire and War', '草与智慧':'Grass and Wisdom', '静思浮梦':'Dreams of Contemplation', '霜月的祷言':'Prayer of the Frostmoon',

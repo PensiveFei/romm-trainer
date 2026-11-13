@@ -69,7 +69,8 @@ let previewMs = 0, bindingIndex = -1, messageTimer = null, feedbackTimer = null;
 let lastMessage = '', lastMessageEn = null, lastMessageJa = null, lastFeedback = '', lastPlayText = '开始练习', lastKeyHelp = '点击键位，再按下新的按键', lastSavedAudioStatus = '音频仅保存在当前浏览器，不会上传。';
 let seeking = false;
 let currentIdentity=chartIdentity(sourceType,currentSong,chart), lastResult=null;
-let keys = ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'];
+const keySets = { 4: ['KeyA','KeyS','KeyK','KeyL'], 6: ['KeyA','KeyS','KeyD','KeyJ','KeyK','KeyL'] };
+let keys = keySets[6];
 const held = new Set();
 const activeInputs = new Map();
 let themeId = 'base', currentTheme = getTheme(themeId);
@@ -95,7 +96,9 @@ try {
   const savedTheme = localStorage.getItem('romm-trainer-theme');
   if (Object.hasOwn(THEMES, savedTheme)) themeId = savedTheme;
   const stored = JSON.parse(localStorage.getItem('romm-trainer-keys') || 'null');
-  if (Array.isArray(stored) && stored.length === 6 && new Set(stored).size === 6 && stored.every(k => /^(Key[A-Z]|Digit[0-9])$/.test(k))) keys = stored;
+  if (Array.isArray(stored) && stored.length === 6 && new Set(stored).size === 6 && stored.every(k => /^(Key[A-Z]|Digit[0-9])$/.test(k))) keys = keySets[6] = stored;
+  const storedFour = JSON.parse(localStorage.getItem('romm-trainer-keys-4') || 'null');
+  if (Array.isArray(storedFour) && storedFour.length === 4 && new Set(storedFour).size === 4 && storedFour.every(k => /^(Key[A-Z]|Digit[0-9])$/.test(k))) keySets[4] = storedFour;
   const savedScroll = Number(localStorage.getItem('romm-trainer-scroll'));
   if (savedScroll >= 0.3 && savedScroll <= 2) scrollRate = savedScroll;
   const savedOffset = Number(localStorage.getItem('romm-trainer-offset'));
@@ -231,6 +234,7 @@ function setKeyHelp(text) { lastKeyHelp=text; els.keyHelp.textContent=translate(
 function setSavedAudioStatus(text) { lastSavedAudioStatus=text; if (els.savedAudioStatus) els.savedAudioStatus.textContent=translate(text); }
 function keyLabel(code) { return code.replace(/^Key/,'').replace(/^Digit/,''); }
 function renderKeys() {
+  els.keys.dataset.lanes = String(keys.length);
   els.keys.replaceChildren();
   keys.forEach((key, lane) => {
     const b = document.createElement('button');
@@ -248,6 +252,14 @@ function renderKeys() {
   });
 }
 function updateMeta() {
+  if (keys !== keySets[chart.laneCount]) { keys = keySets[chart.laneCount]; bindingIndex = -1; renderKeys(); }
+  const laneText = translate(chart.laneCount === 4 ? '四键' : '六键');
+  if ($('trackLanes')) $('trackLanes').textContent = laneText;
+  if ($('sideLanes')) $('sideLanes').textContent = laneText;
+  canvas.setAttribute('aria-label', translate(chart.laneCount === 4 ? '四轨音符练习区' : '六轨音符练习区'));
+  const touchControls = $('touchControls');
+  if (touchControls) { touchControls.dataset.lanes = String(chart.laneCount); touchControls.style.setProperty('--lane-count', String(chart.laneCount)); }
+  for (let lane = 0; lane < 6; lane++) { const button = $('touchLane' + lane); if (button) button.hidden = lane >= chart.laneCount; }
   const title = sourceType === 'song' ? songName(currentSong) : sourceType === 'demo' ? translate(chart.title) : chart.title;
   const artist = sourceType === 'local' ? (chart.artist || translate('本地谱面')) : translate(chart.artist || '本地谱面').replace('传说难度', tr('传说难度', 'Legendary difficulty'));
   els.title.textContent = title;
@@ -778,7 +790,7 @@ function renderStage(songMs) {
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
   const portraitPhone=!!portraitQuery?.matches;
-  const {left,laneWidth,hitY,spawnY,clipTop,travelMs}=stageLayout(w,h,portraitPhone);
+  const {left,laneWidth,hitY,spawnY,clipTop,travelMs}=stageLayout(w,h,portraitPhone,chart.laneCount);
   const travel = travelMs / scrollRate;
   const pxPerMs = (hitY - spawnY) / travel;
   const showTime = songMs - offset * rate;
@@ -788,7 +800,7 @@ function renderStage(songMs) {
   // Keep entering notes clear of the toolbar and the portrait score display.
   ctx.save(); ctx.beginPath(); ctx.rect(0,clipTop,w,Math.max(0,h-clipTop)); ctx.clip();
 
-  for (let lane=0;lane<6;lane++) {
+  for (let lane=0;lane<chart.laneCount;lane++) {
     const x = center(lane);
     const beam = ctx.createLinearGradient(0,spawnY,0,hitY);
     beam.addColorStop(0,'rgba(233,241,237,0)');
@@ -855,7 +867,7 @@ function renderStage(songMs) {
       ctx.beginPath();ctx.arc(center(effect.lane),hitY,radius*(.55+progress),0,Math.PI*2);ctx.stroke();ctx.restore();
     } else paintHit(ctx,currentTheme,center(effect.lane),hitY,radius,progress,compact);
   }
-  for (let lane=0;lane<6;lane++) {
+  for (let lane=0;lane<chart.laneCount;lane++) {
     const x=center(lane);
     ctx.save();
     if (held.has(lane)) {ctx.shadowColor=currentTheme.accent;ctx.shadowBlur=18;}
@@ -1065,7 +1077,7 @@ window.addEventListener('keydown',(event) => {
     if (!/^(Key[A-Z]|Digit[0-9])$/.test(event.code)) { setKeyHelp('请使用字母或数字键'); return; }
     if (keys.includes(event.code) && keys[bindingIndex] !== event.code) { setKeyHelp('这个按键已分配给其他轨道'); return; }
     keys[bindingIndex]=event.code; bindingIndex=-1; setKeyHelp('键位已保存');
-    try { localStorage.setItem('romm-trainer-keys',JSON.stringify(keys)); } catch {}
+    try { localStorage.setItem(chart.laneCount === 4 ? 'romm-trainer-keys-4' : 'romm-trainer-keys',JSON.stringify(keys)); } catch {}
     renderKeys(); scheduleStageFrame(); return;
   }
   if (event.code === 'Escape' && !els.drawer.hidden) { event.preventDefault(); setDrawerOpen(false); els.drawerToggle.focus(); return; }

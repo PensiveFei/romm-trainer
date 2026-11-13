@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "title": "Four-key practice sample",
+  "artist": "Original demo chart",
+  "durationMs": 12000,
+  "bpm": 120,
+  "laneCount": 4,
+  "notes": [
+    { "atMs": 2000, "lane": 0, "holdMs": 0 },
+    { "atMs": 2500, "lane": 1, "holdMs": 0 },
+    { "atMs": 3000, "lane": 2, "holdMs": 0 },
+    { "atMs": 3500, "lane": 3, "holdMs": 0 },
+    { "atMs": 4000, "lane": 0, "holdMs": 1000 },
+    { "atMs": 4000, "lane": 3, "holdMs": 0 },
+    { "atMs": 5500, "lane": 1, "holdMs": 0 },
+    { "atMs": 6000, "lane": 2, "holdMs": 1000 }
+  ]
+}

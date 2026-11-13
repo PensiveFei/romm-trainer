@@ -23,18 +23,18 @@ export function resolveChartUrl(path, moduleUrl = import.meta.url) {
 
 export function validateChart(value) {
   if (!value || typeof value !== 'object' || value.version !== 1) throw new Error('谱面版本应为 1。');
-  if (value.laneCount !== 6) throw new Error('当前版本仅支持六键谱面。');
+  if (![4, 6].includes(value.laneCount)) throw new Error('仅支持四键或六键谱面。');
   if (!Number.isFinite(value.durationMs) || value.durationMs < 4000 || value.durationMs > 300000) throw new Error('谱面时长须为 4 秒至 5 分钟。');
   if (!Array.isArray(value.notes) || value.notes.length < 1 || value.notes.length > 5000) throw new Error('谱面需包含 1 至 5000 个音符。');
   const title = typeof value.title === 'string' ? value.title.trim().slice(0,80) : '';
   if (!title) throw new Error('谱面需要标题。');
   const notes = value.notes.map((note, index) => {
-    if (!note || !Number.isFinite(note.atMs) || note.atMs < 0 || !Number.isInteger(note.lane) || note.lane < 0 || note.lane >= 6 || !Number.isFinite(note.holdMs) || note.holdMs < 0 || note.atMs + note.holdMs > value.durationMs) {
+    if (!note || !Number.isFinite(note.atMs) || note.atMs < 0 || !Number.isInteger(note.lane) || note.lane < 0 || note.lane >= value.laneCount || !Number.isFinite(note.holdMs) || note.holdMs < 0 || note.atMs + note.holdMs > value.durationMs) {
       throw new Error('第 ' + (index + 1) + ' 个音符的时间、轨道或时长无效。');
     }
     return { id: index, atMs: note.atMs, lane: note.lane, holdMs: note.holdMs };
   }).sort((a,b) => a.atMs - b.atMs || a.lane - b.lane);
-  const last = Array(6).fill(null);
+  const last = Array(value.laneCount).fill(null);
   for (const note of notes) {
     const prev = last[note.lane];
     if (prev && note.atMs <= prev.atMs + prev.holdMs) throw new Error('同一轨道的音符不能在同一时刻出现或与长按重叠。');
@@ -51,7 +51,7 @@ export function validateChart(value) {
   }
   const beatTimesMs = value.beatTimesMs;
   if (beatTimesMs !== undefined && (!Array.isArray(beatTimesMs) || beatTimesMs.length > 5000 || beatTimesMs.some((time, index) => !Number.isFinite(time) || time < 0 || time >= value.durationMs || (index > 0 && time <= beatTimesMs[index - 1])))) throw new Error('节拍信息无效。');
-  return { version: 1, title, artist: typeof value.artist === 'string' ? value.artist.trim().slice(0,80) : '', durationMs: value.durationMs, bpm, laneCount: 6, notes, ...(tempoMap && {tempoMap}), ...(beatTimesMs && {beatTimesMs: [...beatTimesMs]}) };
+  return { version: 1, title, artist: typeof value.artist === 'string' ? value.artist.trim().slice(0,80) : '', durationMs: value.durationMs, bpm, laneCount: value.laneCount, notes, ...(tempoMap && {tempoMap}), ...(beatTimesMs && {beatTimesMs: [...beatTimesMs]}) };
 }
 
 export const demoChart = validateChart({

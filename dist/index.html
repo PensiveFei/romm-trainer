@@ -40,7 +40,7 @@
       <main class="workspace">
         <section class="practice-card" aria-label="谱面练习">
           <div class="card-head">
-            <div class="track-heading"><h1 id="trackTitle">节拍练习 · 六键</h1><div class="track-meta"><span id="trackArtist">原创示范谱</span><i></i><span id="trackInfo">120 BPM</span><i></i><span>六键</span></div></div>
+            <div class="track-heading"><h1 id="trackTitle">节拍练习 · 六键</h1><div class="track-meta"><span id="trackArtist">原创示范谱</span><i></i><span id="trackInfo">120 BPM</span><i></i><span id="trackLanes">六键</span></div></div>
             <div class="theme-picker">
               <label for="themeSelect"><span aria-hidden="true">✦</span> 谱面主题</label>
               <select id="themeSelect" aria-label="谱面主题">
@@ -79,7 +79,7 @@
             </div>
             <div id="stageHint" class="stage-hint"><span class="hint-diamond">✦</span><strong>准备演奏</strong><span>点击上方播放键开始练习</span></div>
             <div id="practiceCountdown" class="practice-countdown" role="status" aria-live="polite" hidden></div>
-            <div class="touch-controls" aria-label="触屏演奏区">
+            <div id="touchControls" class="touch-controls" aria-label="触屏演奏区">
               <button id="touchLane0" type="button" aria-label="第 1 轨"></button><button id="touchLane1" type="button" aria-label="第 2 轨"></button><button id="touchLane2" type="button" aria-label="第 3 轨"></button><button id="touchLane3" type="button" aria-label="第 4 轨"></button><button id="touchLane4" type="button" aria-label="第 5 轨"></button><button id="touchLane5" type="button" aria-label="第 6 轨"></button>
             </div>
             <div id="feedback" class="feedback" aria-live="polite"></div>
@@ -119,7 +119,7 @@
           <div class="side-track-title" id="sideTitle">节拍练习 · 六键</div>
           <div class="side-track-sub" id="sideArtist">原创示范谱</div>
           <div class="track-rule"></div>
-          <div class="track-data"><span>谱面</span><strong>六键</strong></div>
+          <div class="track-data"><span>谱面</span><strong id="sideLanes">六键</strong></div>
           <div class="track-data"><span>节拍</span><strong id="sideBpm">120 BPM</strong></div>
         </div>
         <div class="side-divider"></div>

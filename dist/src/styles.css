@@ -204,6 +204,7 @@ input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px s
 .offset-input { display: flex; align-items: center; gap: 2px; padding: 4px 8px; border: 1px solid rgba(226,224,215,.25); border-radius: 13px; background: rgba(21,26,39,.5); color: #c3c6c2; font-size: 10px; }
 .offset-input input { width: 42px; border: 0; background: transparent; color: #f0e9da; text-align: right; font-size: 11px; }
 .key-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.key-grid[data-lanes="4"] { grid-template-columns: repeat(4, 1fr); }
 .key-grid button { height: 28px; padding: 0; border: 1px solid #dedcd3; border-radius: 3px; color: #343c4b; background: #ece9df; font-weight: 700; font-size: 11px; }
 .key-grid button:hover, .key-grid button.listening { background: #f3d895; border-color: #fff0c7; }
 .key-help { margin: 9px 0 0; color: #aeb8bb; font-size: 10px; }
@@ -471,10 +472,11 @@ body { min-width:0; }
 .setting-help { margin:3px 0 0; color:#899295; font-size:10px; }
 .feedback[data-kind="miss"] { color:#ffd1c1; text-shadow:0 0 9px rgba(255,142,118,.55),0 2px 4px #463638; }
 
-/* Touch lanes follow the same six centers as the canvas and support multi-touch. */
+/* Touch lanes follow the canvas centers and support multi-touch. */
 .touch-controls { display:none; }
+.touch-controls button[hidden] { display:none; }
 @media (pointer:coarse), (orientation:landscape) and (max-height:600px), (orientation:portrait) and (max-width:600px) {
-  .touch-controls { position:absolute; z-index:6; left:50%; bottom:30px; transform:translateX(-50%); width:min(78%,1050px); height:150px; display:grid; grid-template-columns:repeat(6,1fr); touch-action:none; -webkit-touch-callout:none; }
+  .touch-controls { position:absolute; z-index:6; left:50%; bottom:30px; transform:translateX(-50%); width:min(78%,1050px); height:150px; display:grid; grid-template-columns:repeat(var(--lane-count, 6),1fr); touch-action:none; -webkit-touch-callout:none; }
   .touch-controls button { min-width:0; border:0; border-radius:16px; background:transparent; touch-action:none; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
   .touch-controls button:active { background:linear-gradient(0deg,rgba(239,225,181,.16),transparent); }
 }
@@ -509,6 +511,7 @@ body { min-width:0; }
   .combo-display { top:0; }.combo-display strong { font-size:25px; }.stage-status { font-size:10px; }.stage-mode { display:none; }
   .under-stage,.stage-foot { display:none; }.stage-hint { top:42%; }.feedback { top:62%; }.message { bottom:8px; max-width:94%; font-size:11px; white-space:normal; }
   .touch-controls { width:100%; grid-template-columns:18.6667% repeat(4,15.66665%) 18.6667%; height:min(55%,340px); bottom:0; }
+  .touch-controls[data-lanes="4"] { grid-template-columns:26.5% 23.5% 23.5% 26.5%; }
   .tools-drawer:not(.home-drawer) { top:54px; right:10px; width:calc(100% - 20px); max-height:calc(100% - 64px); }
   .tools-drawer:not(.home-drawer) .drawer-columns { display:flex; flex-direction:column; }
   .tools-drawer:not(.home-drawer) .control-column { order:-1; }

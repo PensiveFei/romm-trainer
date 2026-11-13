@@ -92,7 +92,7 @@ Completion is measured against the maximum possible score in the selected A–B 
 
 ## Local Chart Format
 
-Charts use UTF-8 JSON. Times are in milliseconds and the six lanes are numbered 0–5. After importing a chart, select its matching audio file.
+Charts use UTF-8 JSON. Set `laneCount` to 4 or 6; lanes are numbered from 0 to `laneCount - 1`, and times are in milliseconds. Four-key charts default to A, S, K, L; six-key charts use A, S, D, J, K, L. Each layout keeps its own key bindings. Import a chart and select matching audio; try the [original four-key sample](examples/four-key-chart.json).
 
 ```json
 {

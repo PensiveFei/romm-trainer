@@ -12,7 +12,9 @@ export function resultPercent(result) {
 // Separate chart revisions as well as difficulty settings, so incompatible
 // attempts are never presented as the same personal best.
 export function chartIdentity(sourceType, song, chart) {
-  const data=JSON.stringify([chart.durationMs,chart.bpm,chart.tempoMap || null,chart.notes.map(n=>[n.atMs,n.lane,n.holdMs])]);
+  const identityParts=[chart.durationMs,chart.bpm,chart.tempoMap || null,chart.notes.map(n=>[n.atMs,n.lane,n.holdMs])];
+  if (chart.laneCount === 4) identityParts.push(4);
+  const data=JSON.stringify(identityParts);
   let hash=2166136261;
   for (let i=0;i<data.length;i++) { hash^=data.charCodeAt(i); hash=Math.imul(hash,16777619); }
   const sourceId=sourceType==='song' && song?.id ? song.id : sourceType==='demo' ? 'demo' : 'local';
