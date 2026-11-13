@@ -3,7 +3,7 @@ import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 import { isReferenceTheme, paintReferenceNote, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
-import { localAudioStore } from './local-audio.js';
+import { localAudioStore, localAudioOffsets } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
 import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
 import { initLanguage, translate, tr, songName } from './i18n.js';
@@ -37,6 +37,7 @@ const localAudio = new Audio();
 localAudio.preload = 'metadata';
 localAudio.preservesPitch = true;
 let audio = localAudio, onlineAudio = null, audioMode = 'demo', musicStart = 0;
+let currentLocalFile = null, rememberLocalOffset = false;
 let practiceVolume = 100;
 try { const saved = localStorage.getItem('romm-trainer-practice-volume'); if (saved !== null && Number.isFinite(Number(saved))) practiceVolume = Math.max(0, Math.min(100, Number(saved))); } catch {}
 function setPracticeVolume(value) {
@@ -546,10 +547,12 @@ function stopAudio() {
   if (localUnlock) { localUnlock.player.muted=localUnlock.muted; localUnlock=null; }
   if (wasPending) { hasStarted=playWasResume; setPlayText(hasStarted?'继续练习':'开始练习'); els.playIcon.textContent='▶'; if (!hasStarted) els.hint.classList.remove('hidden'); }
 }
-function replaceAudio(url, mode = 'local') {
+function replaceAudio(url, mode = 'local', file = null, rememberOffset = false) {
   stopAudio();
   audio = localAudio;
-  musicStart = 0;
+  currentLocalFile = mode === 'local' ? file : null;
+  rememberLocalOffset = !!(currentLocalFile && rememberOffset && sourceType === 'song');
+  musicStart = rememberLocalOffset ? localAudioOffsets.get(currentSong.id || currentSong.chartUrl, currentLocalFile) : 0;
   audioReady = false;
   setAudioMode(mode);
   if (audioUrl) URL.revokeObjectURL(audioUrl);
@@ -568,6 +571,13 @@ localAudio.addEventListener('loadedmetadata', () => {
   }
   audioReady = true;
   audioFailed = false; updateAudioBadge();
+  if (audioMode === 'local' && sourceType === 'song') {
+    const maxStart = Math.max(0, Math.min(120, audio.duration - chart.durationMs / 1000));
+    els.musicStart.max = String(maxStart);
+    musicStart = Math.min(musicStart, maxStart);
+    els.musicStart.value = String(musicStart);
+    if (rememberLocalOffset) localAudioOffsets.set(currentSong.id || currentSong.chartUrl, currentLocalFile, musicStart);
+  }
   resetSession();
   if (audioMode === 'local') setMessage('本地音频已就绪，可以开始练习。', true);
 });
@@ -575,7 +585,12 @@ localAudio.addEventListener('error', () => {
   if (audio !== localAudio) return;
   audioReady = false;
   audioFailed = true; updateAudioBadge();
-  if (audio.src) setMessage('无法读取音频，请尝试浏览器支持的格式。', false, 0);
+  if (!audio.src) return;
+  if (/\.(?:mgg|mflac|ncm)$/i.test(currentLocalFile?.name || '')) {
+    setMessage('无法读取此平台专用音频，请选择可播放的 MP3、M4A、WAV、OGG 或 FLAC 文件。', false, 0,
+      'This platform-specific audio could not be read. Choose a playable MP3, M4A, WAV, OGG, or FLAC file.',
+      'このプラットフォーム専用音源を読み込めません。再生可能な MP3、M4A、WAV、OGG、FLAC を選択してください。');
+  } else setMessage('无法读取音频，请尝试浏览器支持的格式。', false, 0);
 });
 localAudio.addEventListener('ended', () => { if (audio === localAudio && isPlaying) completePass(); });
 
@@ -632,7 +647,7 @@ async function useSong(song = DEFAULT_SONG) {
     try { savedFile = await localAudioStore.get(song.id || song.chartUrl); } catch { /* Local storage may be unavailable. */ }
     if (selection !== selectionId) return;
     if (savedFile instanceof Blob) {
-      replaceAudio(URL.createObjectURL(savedFile));
+      replaceAudio(URL.createObjectURL(savedFile), 'local', savedFile, true);
       if (els.forgetAudio) els.forgetAudio.hidden=false;
       setSavedAudioStatus('已载入本设备保存的音频：' + (savedFile.name || '本地音频'));
       setMessage('已载入本设备保存的音频，可以直接练习。',true);
@@ -975,6 +990,9 @@ els.musicStart.addEventListener('change',()=>{
   const value = Number(els.musicStart.value);
   musicStart = Number.isFinite(value) ? Math.max(0, Math.min(Number(els.musicStart.max), value)) : 0;
   els.musicStart.value = String(musicStart);
+  if (audioMode === 'local' && sourceType === 'song' && rememberLocalOffset) {
+    localAudioOffsets.set(currentSong.id || currentSong.chartUrl, currentLocalFile, musicStart);
+  }
   resetSession();
   setMessage('音源起点已调整为 ' + musicStart.toFixed(2) + ' 秒，谱面已回到片段起点。', true);
 });
@@ -1008,7 +1026,7 @@ els.audioFile.addEventListener('change',()=>{
       localAudio.addEventListener('loadedmetadata',loaded);
       localAudio.addEventListener('error',failed);
     }
-    replaceAudio(url); setMessage('正在读取本地音频…',true,0);
+    replaceAudio(url, 'local', file, !!(selectedSong && els.rememberAudio?.checked)); setMessage('正在读取本地音频…',true,0);
   }
   els.audioFile.value='';
 });
@@ -1018,6 +1036,8 @@ els.forgetAudio?.addEventListener('click',async()=>{
   try {
     await localAudioStore.remove(song.id || song.chartUrl);
     if (selectionId !== selectedId || currentSong !== song) return;
+    localAudioOffsets.remove(song.id || song.chartUrl);
+    rememberLocalOffset = false;
     els.forgetAudio.hidden=true;
     setSavedAudioStatus('已删除保存的音频；当前已载入的音频仍可播放。');
   } catch { setMessage('未能删除本地音频，请稍后重试。',false); }

@@ -78,7 +78,7 @@ The trial charts are converted from the public [score repository](https://md-ndv
 
 Open “Charts & Settings” and choose “Surasthana Fantasia · Legendary” to load the six-lane chart with 231 notes at 168 BPM. The chart is adapted from the public [score database](https://md-ndv356.github.io/genshin-rmm/en_us/_GMusic16/legend/) and contains taps and holds.
 
-By default, the official YouTube player attempts to play the [The Shimmering Voyage Vol. 3 soundtrack album](https://www.youtube.com/watch?v=2SvpviExw1o&t=2582s), with the track starting at about 43:02. Availability depends on the network, region, and player policies. The album version is longer than the 1:35 in-game edit, and their full alignment has not been verified. You can adjust the audio start offset, but this does not guarantee synchronization throughout the song. A 168 BPM metronome without the soundtrack and a user-provided local audio file are available as alternatives.
+By default, the official YouTube player attempts to play [The Stellar Moments Vol. 3 soundtrack album](https://www.youtube.com/watch?v=2SvpviExw1o&t=2582s), with the track starting at about 43:02. Availability depends on the network, region, and player policies. The album version is longer than the 1:35 in-game edit, and their full alignment has not been verified. You can adjust the audio start offset, but this does not guarantee synchronization throughout the song. A 168 BPM metronome without the soundtrack and a user-provided local audio file are available as alternatives. When you save local audio for a song, its start point is also saved in the current browser.
 
 Song, soundtrack, and game-content rights remain with their respective owners; the project's MIT license does not grant rights to third-party content.
 

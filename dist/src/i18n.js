@@ -39,6 +39,7 @@ const translations = {
   '将所选本地音频保存在本设备':'Save selected local audio on this device', '音频仅保存在当前浏览器，不会上传。':'Audio stays in this browser and is never uploaded.',
   '删除此曲目的本地音频':'Delete saved audio for this song', '音源起点':'Audio Start', '秒':'sec',
   '调整原声或本地音频的起点，使其与谱面配合；节拍伴奏无需调整。':'Adjust the audio start to synchronize it with the chart. The metronome does not need adjustment.',
+  '保存本地音频时同时保存起点。':'The start point is saved with local audio.',
   '独立手动练习原型':'Standalone manual practice prototype', '非官方项目':'Unofficial project', '练习设置':'Practice Settings',
   '练习控制':'Practice Controls', '片段练习':'Section Practice', '起点':'Start', '终点':'End', '练习起点':'Practice start',
   '练习终点':'Practice end', '区间循环':'Loop Section', '重复练习选定的片段':'Repeat the selected section', '循环练习':'Loop practice',
