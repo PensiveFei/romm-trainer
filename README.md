@@ -1,6 +1,6 @@
 # 千音习谱 | ROMM-Trainer
 
-English | [简体中文](README.zh-CN.md)
+English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 Repertoire of Myriad Melodies Trainer
 
@@ -25,20 +25,11 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 ## Core Features
 
-- **Manual practice**: Use six keyboard lanes on PC or touch the lanes on mobile, including taps, simultaneous notes, and holds.
-- **Interface language**: Switch between Simplified Chinese, English, and Japanese in settings; the choice is saved in your browser.
-- **Countdown**: A cancellable three-second countdown precedes starting or resuming practice.
-- **Background music**: The home screen and library play the [official Dream Aria recording](https://www.bilibili.com/audio/au1659248). Use the top music button to turn it off and settings to adjust its volume; it pauses during practice and song previews. If autoplay is blocked, click the music button to start it.
-- **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
 - **Seeking**: Drag the timeline or use the arrow keys or mobile buttons to seek by ten seconds. Mobile controls can also set A and B from the current position; seeking restarts scoring from that position.
 - **Practice settings**: Adjust playback rate, practice audio volume, note scroll speed, hit window, timing offset, and key sound volume. Manual presses play a synthesized pluck; set the volume to zero to mute it.
-- **Online playback speed**: If the player does not apply the selected rate, or its rate changes in the player, the actual rate is shown and practice restarts so timing uses the correct speed.
-- **Score themes**: Choose from sixteen themes with distinct scenery, notes and manual hit effects; your choice is saved locally.
 - **Practice feedback**: See live completion, hits, combo, misses, and early or late timing, then review each finished attempt. Personal bests are saved in the current browser separately for each chart version, section, and set of practice settings.
-- **Home and favorites**: Start from featured songs or albums and save favorite songs in the current browser.
 - **Local charts**: Try an original sample chart or import your own JSON chart and matching audio.
-- **Song library**: Browse by album, filter by chart status, or search 150 titles by their Chinese, English, Japanese, or Japanese kana names, with 128 structurally checked six-lane Legendary trial charts. The remaining 22 need further source data or review.
-- **Accompaniment**: The practice screen shows the current audio source. Some songs link to an official online soundtrack; unavailable online audio falls back to a metronome. User-selected local audio can be saved in the current browser and loaded again for that song without uploading it. The metronome does not contain the soundtrack; alignment with each in-game edit remains provisional.
+- **Section looping**: Select an A–B section and optionally repeat it with a short lead-in before each attempt. Looping is off by default.
 
 ## Statement
 
