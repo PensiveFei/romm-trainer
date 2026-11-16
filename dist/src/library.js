@@ -85,7 +85,7 @@ function renderDetails() {
       if (!mount.hidden) {const current=mount.querySelector('audio');if(current) current.pause();mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
       const frame=element(domestic ? 'audio' : 'iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
       if (domestic) {
-        const sources=[neteaseMetingStream(domestic.id),neteaseStream(domestic.id),neteaseSecureStream(domestic.id)];
+        const sources=[neteaseMetingStream(domestic.id),neteaseSecureStream(domestic.id),neteaseStream(domestic.id)];
         let sourceIndex=0;
         frame.src=sources[sourceIndex];frame.controls=true;frame.preload='none';
         frame.addEventListener('error',()=>{if(sourceIndex+1>=sources.length)return;frame.src=sources[++sourceIndex];frame.load();});

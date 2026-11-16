@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>千音习谱 · 音源检测</title>
+  <style>
+    body{max-width:42rem;margin:0 auto;padding:1.5rem;font:16px/1.6 system-ui,sans-serif;color:#eee;background:#202331}
+    h1{font-size:1.4rem} p{color:#ddd} button{padding:.7rem 1rem;font:inherit;border:0;border-radius:.4rem;background:#e9d5a6;color:#27232c}
+    button:disabled{opacity:.55} li{margin:.5rem 0} textarea{width:100%;min-height:11rem;box-sizing:border-box;padding:.6rem;font:14px/1.5 monospace}
+  </style>
+</head>
+<body>
+  <h1>音源连接检测</h1>
+  <p>关闭代理后点击“开始检测”。检测使用《净善的遐歌》，静音尝试几种连接方式，约需 20 秒。</p>
+  <p>检测结果只显示在本机，不会自动上传；复制并发送结果时会包含浏览器型号和错误代码。</p>
+  <button id="run" type="button">开始检测</button>
+  <ol id="results"></ol>
+  <label for="report">检测结果</label>
+  <textarea id="report" readonly></textarea>
+  <p><button id="copy" type="button">复制结果</button></p>
+  <p><a href="/" style="color:#e9d5a6">返回千音习谱</a></p>
+  <script>
+  (() => {
+    const run=document.getElementById('run'), copy=document.getElementById('copy');
+    const results=document.getElementById('results'), report=document.getElementById('report');
+    const sources=[
+      ['第三方 HTTPS 接口','https://met.liiiu.cn/meting/api?server=netease&type=url&id=2014247586&br=128'],
+      ['本站 HTTPS 接口','/api/netease/2014247586'],
+      ['网易云直接连接','https://music.163.com/song/media/outer/url?id=2014247586.mp3']
+    ];
+    let version='未知';
+    fetch('/build-info.json?audio-check=1',{cache:'no-store'}).then(r=>r.json()).then(info=>{version=info.version||version;}).catch(()=>{});
+    function probe(name,url,item) {
+      return new Promise(resolve=>{
+        const media=new Audio();let finished=false, metadata='';
+        const timer=setTimeout(()=>finish('连接超时'+metadata),18000);
+        function finish(value) {
+          if(finished)return;finished=true;clearTimeout(timer);
+          media.pause();media.removeAttribute('src');media.load();
+          item.textContent=name+'：'+value;resolve(name+'：'+value);
+        }
+        media.muted=true;media.preload='auto';
+        media.addEventListener('loadedmetadata',()=>{metadata='，时长 '+Math.round(media.duration)+' 秒';});
+        media.addEventListener('playing',()=>finish('可以播放'+metadata));
+        media.addEventListener('error',()=>finish('加载失败（媒体错误 '+(media.error ? media.error.code : '未知')+'）'+metadata));
+        media.src=url;
+        try {
+          const started=media.play();
+          if(started && started.catch)started.catch(error=>finish('播放请求失败（'+(error.name||'未知')+'）'+metadata));
+        } catch(error) {finish('播放请求失败（'+(error.name||'未知')+'）'+metadata);}
+      });
+    }
+    run.addEventListener('click',()=>{
+      run.disabled=true;results.textContent='';report.value='检测中…';
+      const checks=sources.map(([name,url])=>{
+        const item=document.createElement('li');item.textContent=name+'：检测中…';results.appendChild(item);
+        return probe(name,url,item);
+      });
+      Promise.all(checks).then(lines=>{
+        report.value=['网站版本：'+version,'浏览器：'+navigator.userAgent,...lines].join('\n');
+        run.disabled=false;
+      });
+    });
+    copy.addEventListener('click',()=>{
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(report.value).then(()=>{copy.textContent='已复制';}).catch(()=>{report.select();});
+      } else {report.focus();report.select();}
+    });
+  })();
+  </script>
+</body>
+</html>

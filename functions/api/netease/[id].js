@@ -15,6 +15,13 @@ export async function resolveTrack(rawId, fetchImpl = fetch) {
     ['interface3', 'interface3.music.163.com']
   ];
   const code = value => Number.isInteger(value) ? String(value) : 'missing';
+  const secureProviderUrl = raw => {
+    const url = new URL(raw);
+    if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.port ||
+        !/(^|\.)(?:music\.126\.net|music\.163\.com)$/i.test(url.hostname)) throw new Error();
+    url.protocol = 'https:';
+    return url.href;
+  };
   const resolveFrom = async ([label, host]) => {
     let reason = 'network';
     try {
@@ -35,18 +42,31 @@ export async function resolveTrack(rawId, fetchImpl = fetch) {
       else reason = '';
       if (reason) throw new Error();
       reason = 'invalid-url';
-      const url = new URL(song.url);
-      if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.port ||
-          !/(^|\.)(?:music\.126\.net|music\.163\.com)$/i.test(url.hostname)) throw new Error();
-      url.protocol = 'https:';
-      return url.href;
+      return secureProviderUrl(song.url);
     } catch (error) {
       if (error?.name === 'AbortError') reason = 'timeout';
       throw new Error(`${label}-${reason}`);
     }
   };
+  const resolveMeting = async () => {
+    let reason = 'network';
+    try {
+      const endpoint = new URL('https://met.liiiu.cn/meting/api');
+      endpoint.searchParams.set('server', 'netease');
+      endpoint.searchParams.set('type', 'url');
+      endpoint.searchParams.set('id', String(id));
+      endpoint.searchParams.set('br', '128');
+      const response = await fetchImpl(endpoint.href, {signal:controller.signal, redirect:'manual'});
+      if (![301,302,303,307,308].includes(response.status)) { reason = `http-${code(response.status)}`; throw new Error(); }
+      reason = 'invalid-url';
+      return secureProviderUrl(response.headers.get('Location'));
+    } catch (error) {
+      if (error?.name === 'AbortError') reason = 'timeout';
+      throw new Error(`meting-${reason}`);
+    }
+  };
   try {
-    const url = await Promise.any(endpoints.map(resolveFrom));
+    const url = await Promise.any([...endpoints.map(resolveFrom),resolveMeting()]);
     return new Response(null, {status:302, headers:{Location:url,'Cache-Control':'no-store'}});
   } catch (error) {
     const reasons = error?.errors?.map(item => item.message).join(',') || 'unknown';

@@ -10,7 +10,7 @@ export class NetEaseAudio {
     this.failed = false;
     this.destroyed = false;
     this.media = createAudio();
-    this.sources = [neteaseMetingStream(track.id), neteaseStream(track.id), neteaseSecureStream(track.id)];
+    this.sources = [neteaseMetingStream(track.id), neteaseSecureStream(track.id), neteaseStream(track.id)];
     this.sourceIndex = 0;
     this.media.preload = 'metadata';
     this.media.preservesPitch = true;

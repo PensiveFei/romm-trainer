@@ -662,6 +662,8 @@ function useDemo() {
 async function useSong(song = DEFAULT_SONG) {
   const selection = ++selectionId;
   stopAudio();
+  const domesticNotice=$('domesticAudioNotice');
+  if (domesticNotice) domesticNotice.hidden=true;
   setMessage('正在加载《' + song.title + '》传说谱面…', true, 0, 'Loading the Legendary chart for ' + (song.titleEn || song.title) + '…', (song.titleJa || song.titleEn || song.title) + 'のレジェンド譜面を読み込み中…');
   try {
     const response = await fetch(resolveChartUrl(song.chartUrl));
@@ -702,6 +704,11 @@ function discardOnline(player) {
 function handleOnlineFailure(player, error) {
   if (audio !== player || sourceType !== 'song') return;
   const canTryYouTube = player.provider === 'netease' && !!currentSong?.audio;
+  const domesticNotice=$('domesticAudioNotice');
+  if (player.provider === 'netease' && domesticNotice) {
+    domesticNotice.hidden=false;
+    domesticNotice.textContent=tr('网易云音源连接失败，请重试或选择其他伴奏。','NetEase audio could not connect. Retry or choose another source.','NetEase Music に接続できません。再試行するか、別の音源を選んでください。');
+  }
   discardOnline(player);
   if (canTryYouTube) {
     setMessage('网易云音乐原声暂不可用，正在尝试 YouTube。',false,0,
@@ -718,6 +725,11 @@ async function useOnline(provider = 'youtube') {
   const domesticTrack = neteaseTrack(currentSong);
   const youtubeTrack = currentSong?.audio;
   if (provider === 'netease' ? !domesticTrack : !youtubeTrack) return;
+  const domesticNotice=$('domesticAudioNotice');
+  if (provider === 'netease' && domesticNotice) {
+    domesticNotice.hidden=false;
+    domesticNotice.textContent=tr('正在连接网易云音源…','Connecting to NetEase audio…','NetEase Music に接続中…');
+  }
   stopAudio();
   musicStart = 0;
   audioReady = false;
@@ -764,6 +776,10 @@ async function useOnline(provider = 'youtube') {
     if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
     updateAudioBadge();
+    if (activeOnline.provider === 'netease' && domesticNotice) {
+      domesticNotice.hidden=false;
+      domesticNotice.textContent=tr('网易云音源已就绪。','NetEase audio is ready.','NetEase Music の準備ができました。');
+    }
     if (!playPending) {
       resetSession();
       setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);

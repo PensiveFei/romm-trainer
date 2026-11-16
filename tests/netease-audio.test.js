@@ -46,9 +46,9 @@ test('a short preview or an unreadable stream does not become a practice source'
   media.duration = 30;
   const audio = new NetEaseAudio({id:1,durationSeconds:141}, () => {}, () => media);
   media.emit('loadedmetadata');
-  assert.equal(media.src, neteaseStream(1), 'an incomplete secure source retries the direct source');
+  assert.equal(media.src, neteaseSecureStream(1), 'an incomplete source retries the site resolver');
   media.emit('loadedmetadata');
-  assert.equal(media.src, neteaseSecureStream(1), 'an incomplete direct source retries the site resolver');
+  assert.equal(media.src, neteaseStream(1), 'an incomplete source retries the direct provider');
   media.emit('loadedmetadata');
   await assert.rejects(audio.ready, /不完整/);
   assert.equal(audio.failed, true);
@@ -59,7 +59,7 @@ test('a failed HTTPS connection retries the provider before reporting failure', 
   const media = new FakeMedia();
   const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, () => {}, () => media);
   media.emit('error');
-  assert.equal(media.src, neteaseStream(2014247586));
+  assert.equal(media.src, neteaseSecureStream(2014247586));
   media.emit('loadedmetadata');
   await audio.ready;
   assert.equal(audio.failed, false);
@@ -109,7 +109,17 @@ test('the secure resolver can use another provider endpoint and reports failures
   assert.match(alternate.headers.get('location'),/^https:/);
   const failed = await resolveTrack('2014247586', async () => ({ok:false,status:403}));
   assert.equal(failed.status,502);
-  assert.equal(failed.headers.get('x-romm-resolver'),'main-http-403,interface-http-403,interface3-http-403');
+  assert.equal(failed.headers.get('x-romm-resolver'),'main-http-403,interface-http-403,interface3-http-403,meting-http-403');
+});
+
+test('the site resolver accepts only NetEase CDN redirects from its alternate endpoint', async () => {
+  const fetcher = location => async url => new URL(url).hostname === 'met.liiiu.cn'
+    ? {status:302,headers:new Headers({Location:location})}
+    : {ok:true,json:async()=>({code:200,data:[{id:2014247586,code:404}]})};
+  const response=await resolveTrack('2014247586',fetcher('http://m701.music.126.net/file.mp3'));
+  assert.equal(response.status,302);
+  assert.equal(response.headers.get('location'),'https://m701.music.126.net/file.mp3');
+  assert.equal((await resolveTrack('2014247586',fetcher('https://music.126.net.example.com/file'))).status,502);
 });
 
 test('closing a still-loading source cancels its readiness and ignores late events', async () => {
