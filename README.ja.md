@@ -20,7 +20,7 @@ Repertoire of Myriad Melodies Trainer
 
 <p align="center">
   <img src="docs/screenshots/library.webp" width="49%" alt="楽曲ライブラリ：150 曲と難易度の選択">
-  <img src="docs/screenshots/practice.webp" width="49%" alt="練習画面：6 レーンの譜面、達成率と判定フィードバック">
+  <img src="docs/screenshots/practice.png" width="49%" alt="練習画面：6 レーンの譜面、達成率と判定フィードバック">
 </p>
 
 ## 主な機能

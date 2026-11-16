@@ -20,7 +20,7 @@ Qianyin Xipu is a “Practice Mode” made for Genshin Impact’s Repertoire of 
 
 <p align="center">
   <img src="docs/screenshots/library.webp" width="49%" alt="Song library: 150 songs and difficulty selection">
-  <img src="docs/screenshots/practice.webp" width="49%" alt="Practice screen: six lanes, completion and hit feedback">
+  <img src="docs/screenshots/practice.png" width="49%" alt="Practice screen: six lanes, completion and hit feedback">
 </p>
 
 ## Core Features

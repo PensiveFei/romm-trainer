@@ -20,7 +20,7 @@ Repertoire of Myriad Melodies Trainer
 
 <p align="center">
   <img src="docs/screenshots/library.webp" width="49%" alt="曲目典藏：150 首曲目与难度选择">
-  <img src="docs/screenshots/practice.webp" width="49%" alt="练习界面：六轨谱面、完成度与判定反馈">
+  <img src="docs/screenshots/practice.png" width="49%" alt="练习界面：六轨谱面、完成度与判定反馈">
 </p>
 
 ## 核心功能
