@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { THEMES, getTheme, paintBackdrop, paintHit } from '../dist/src/themes.js';
-import { isReferenceTheme, paintReferenceBackdrop, paintReferenceHold, paintReferenceNote } from '../dist/src/reference-themes.js';
+import { createReferenceNoteCache, isReferenceTheme, paintReferenceBackdrop, paintReferenceHold, paintReferenceNote } from '../dist/src/reference-themes.js';
 
 const requested=['wind','geo','electro','hydro','pyro','dendro','dream','frost'];
 
@@ -72,4 +72,24 @@ test('the screenshot themes render their own backgrounds, tap notes and holds', 
   assert.equal(paintReferenceNote(unsupported.ctx,'base',100,200,20,false),false);
   assert.equal(paintReferenceHold(unsupported.ctx,'base',100,50,200,20),false);
   assert.equal(unsupported.calls.length,0);
+});
+
+test('reference note sprites are reused without mixing note types or screen scales', () => {
+  const created=[];
+  const cache=createReferenceNoteCache(()=>{
+    const offscreen=recorder();
+    const canvas={getContext:()=>offscreen.ctx};created.push({canvas,offscreen});return canvas;
+  });
+  const stage=recorder();
+  assert.equal(cache.draw(stage.ctx,'plum',100,200,20,false,1.5),true);
+  assert.equal(cache.draw(stage.ctx,'plum',130,240,20,false,1.5),true);
+  assert.equal(created.length,1);
+  assert.equal(stage.calls.filter(call=>call[0]==='drawImage').length,2);
+  assert.equal(cache.draw(stage.ctx,'plum',100,200,20,true,1.5),true);
+  assert.equal(cache.draw(stage.ctx,'plum',100,200,20,false,2),true);
+  assert.equal(created.length,3);
+  assert.equal(cache.draw(stage.ctx,'base',100,200,20,false,1.5),false);
+  const fallback=recorder();
+  assert.equal(createReferenceNoteCache(()=>{throw new Error('no canvas');}).draw(fallback.ctx,'plum',1,2,20,false,1.5),true);
+  assert.ok(fallback.calls.some(call=>call[0]==='ellipse'));
 });

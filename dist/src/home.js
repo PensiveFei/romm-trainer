@@ -1,7 +1,10 @@
 import { favorites } from './favorites.js';
-import { tr, songName, groupName } from './i18n.js';
+import { initLanguage, tr, songName, groupName } from './i18n.js';
 import { setCoverImage } from './cover-images.js';
 import { loadCatalog } from './catalog.js';
+import { loadLibrary, loadPractice } from './feature-loader.js';
+
+initLanguage();
 
 const $=id=>document.getElementById(id);
 const home=$('homeView'), gameFrame=document.querySelector('.game-frame');
@@ -22,12 +25,36 @@ function el(tag,className,text) {
   return node;
 }
 function artFor(group) {const file=albumArt[group.id];return file ? (file.startsWith('../') ? `./assets/${file.slice(3)}` : `./assets/covers/${file}`) : null;}
-function openLibrary(options={}) {window.dispatchEvent(new CustomEvent('romm:open-library',{detail:{from:'home',...options}}));}
-function openPractice(song) {
-  home.hidden=true;gameFrame.inert=false;
-  if(song)window.dispatchEvent(new CustomEvent('romm:select-song',{detail:song}));
-  window.dispatchEvent(new Event('romm:practice-visible'));
-  $('playButton').focus();
+let featureRequest=0;
+async function openFeature(loader,action,label) {
+  const ticket=++featureRequest, notice=$('featureNotice');
+  notice.textContent=label;notice.hidden=false;
+  try {
+    await loader();
+    if (ticket!==featureRequest) return;
+    notice.hidden=true;action();
+  } catch {
+    if (ticket!==featureRequest) return;
+    notice.hidden=false;
+    notice.textContent=tr('加载失败，请检查网络或刷新后重试。','Loading failed. Check your connection or refresh and retry.','読み込みに失敗しました。接続を確認するか更新して再試行してください。');
+  }
+}
+function openLibrary(options={}) {
+  const from=options.from==='practice'?'practice':'home';
+  void openFeature(loadLibrary,()=>{
+    if (from==='home' ? home.hidden : (!home.hidden || !$('libraryView').hidden)) return;
+    window.dispatchEvent(new CustomEvent('romm:open-library',{detail:{...options,from}}));
+  },tr('正在打开曲库…','Opening song library…','曲目一覧を開いています…'));
+}
+function openPractice(song, demo=false) {
+  void openFeature(loadPractice,()=>{
+    if (home.hidden) return;
+    home.hidden=true;gameFrame.inert=false;
+    if(song)window.dispatchEvent(new CustomEvent('romm:select-song',{detail:song}));
+    window.dispatchEvent(new Event('romm:practice-visible'));
+    if(demo)window.dispatchEvent(new Event('romm:home-demo'));
+    $('playButton').focus();
+  },tr('正在打开练习…','Opening practice…','練習を開いています…'));
 }
 function renderFeatured() {
   featuredEl.replaceChildren();
@@ -104,11 +131,12 @@ function restoreDrawer() {
   settingsFromHome=false;drawer.classList.remove('home-drawer');
   drawerParent.insertBefore(drawer,drawerNext);drawer.querySelector('.drawer-head h2').textContent=tr('曲谱与设置','Charts & Settings');backdrop.hidden=true;home.inert=false;$('homeSettingsOpen').focus();
 }
-$('homeSettingsOpen').addEventListener('click',()=>{
+$('homeSettingsOpen').addEventListener('click',()=>void openFeature(loadPractice,()=>{
+  if (home.hidden) return;
   settingsFromHome=true;home.inert=true;backdrop.hidden=false;document.querySelector('.app-viewport').append(drawer);drawer.classList.add('home-drawer');drawer.querySelector('.drawer-head h2').textContent=tr('设置','Settings');
   settingsNav.querySelectorAll('button').forEach((item,index)=>item.setAttribute('aria-current',String(index===0)));controlColumn.scrollTop=0;
   themeSelect.value=$('themeSelect').value;window.dispatchEvent(new Event('romm:open-settings'));
-});
+},tr('正在打开设置…','Opening settings…','設定を開いています…')));
 window.addEventListener('romm:settings-closed',restoreDrawer);
 backdrop.addEventListener('click',()=>$('toolsClose').click());
 drawer.addEventListener('keydown',event=>{
@@ -120,9 +148,11 @@ drawer.addEventListener('keydown',event=>{
 });
 $('homeHelpOpen').addEventListener('click',()=>help.showModal());
 $('homeHelpClose').addEventListener('click',()=>help.close());
-$('homeDemo').addEventListener('click',()=>{openPractice();window.dispatchEvent(new Event('romm:home-demo'));});
+$('homeDemo').addEventListener('click',()=>openPractice(null,true));
 $('homeResume').addEventListener('click',()=>openPractice());
 $('homeOpen').addEventListener('click',()=>window.dispatchEvent(new Event('romm:show-home')));
+$('libraryOpen').addEventListener('click',()=>openLibrary({from:'practice'}));
+$('libraryDrawerButton').addEventListener('click',()=>openLibrary({from:'practice'}));
 $('homeHeroOpen').addEventListener('click',()=>openLibrary({groupId:heroIds[heroIndex]}));
 $('homeExpand').addEventListener('click',()=>{expanded=!expanded;renderAlbums();});
 window.addEventListener('romm:show-home',()=>{home.hidden=false;home.inert=false;gameFrame.inert=true;renderAlbums();$('homeResume').focus();});
@@ -144,6 +174,17 @@ setInterval(()=>{
 },6000);
 gameFrame.inert=true;
 
+// Warm the library after the home content is ready, without delaying its first
+// render. Data-saver users only download it when they open the library.
+function prefetchLibraryWhenIdle() {
+  if (navigator.connection?.saveData) return;
+  const prefetch=()=>{if (!document.hidden && !home.hidden) void loadLibrary().catch(()=>{});};
+  setTimeout(()=>{
+    if (typeof window.requestIdleCallback==='function') window.requestIdleCallback(prefetch,{timeout:3500});
+    else prefetch();
+  },300);
+}
+
 try {
-  catalog=await loadCatalog();renderFeatured();renderHero();renderAlbums();
+  catalog=await loadCatalog();renderFeatured();renderHero();renderAlbums();prefetchLibraryWhenIdle();
 } catch {featuredEl.replaceChildren(el('p','home-loading',tr('曲目加载失败，请检查网络后刷新。','Unable to load songs. Check your connection and refresh.')));renderAlbums();}

@@ -1,16 +1,19 @@
-import { neteaseMetingStream, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
+import { neteaseSources, rememberNeteaseSource, forgetNeteaseSource } from './netease-source-order.js';
 
 // Use the provider's stream as a normal media element so the practice clock
 // follows the actual playback position, including buffering and seeking.
 export class NetEaseAudio {
-  constructor(track, onState = () => {}, createAudio = () => new Audio()) {
+  constructor(track, onState = () => {}, createAudio = () => new Audio(), storage) {
     this.provider = 'netease';
     this.trackId = track.id;
     this.durationSeconds = track.durationSeconds;
     this.failed = false;
     this.destroyed = false;
     this.media = createAudio();
-    this.sources = [neteaseMetingStream(track.id), neteaseSecureStream(track.id), neteaseStream(track.id)];
+    this.storage=storage;
+    const ordered=neteaseSources(track.id,storage);
+    this.sources=ordered.map(source=>source.url);
+    this.sourceNames=ordered.map(source=>source.name);
     this.sourceIndex = 0;
     this.media.preload = 'metadata';
     this.media.preservesPitch = true;
@@ -24,7 +27,12 @@ export class NetEaseAudio {
       // Validate again if a real duration becomes available later.
       durationchange: () => { if (this.settled) this.checkDuration(); },
       error: () => this.retryOrFail(new Error('国内音源暂不可用')),
-      playing: () => { if (!this.destroyed) onState(1); },
+      playing: () => {
+        if (this.destroyed || this.failed) return;
+        const duration=this.media.duration;
+        if (!Number.isFinite(duration) || duration<=0 || duration+1.5>=this.durationSeconds) rememberNeteaseSource(this.sourceNames[this.sourceIndex],this.storage);
+        onState(1);
+      },
       pause: () => { if (!this.destroyed && !this.media.ended) onState(2); },
       ended: () => { if (!this.destroyed) onState(0); },
       ratechange: () => { if (!this.destroyed) onState('ratechange', this.media.playbackRate); }
@@ -49,8 +57,13 @@ export class NetEaseAudio {
 
   retryOrFail(error) {
     if (this.destroyed || this.failed) return;
+    forgetNeteaseSource(this.sourceNames[this.sourceIndex],this.storage);
     if (!this.settled && this.sourceIndex + 1 < this.sources.length) {
       this.media.src = this.sources[++this.sourceIndex];
+      const index=this.sourceIndex;
+      // Media mocks and some implementations can emit metadata during load().
+      // Defer notification until the player has been assigned by its owner.
+      queueMicrotask(()=>{if (!this.destroyed && !this.failed && this.sourceIndex===index) this.onState('sourcechange',{index:index+1,total:this.sources.length});});
       this.media.load();
       return;
     }

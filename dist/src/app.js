@@ -1,14 +1,14 @@
 import { demoChart, validateChart, validateRange, resolveChartUrl } from './chart.js';
 import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
-import { isReferenceTheme, paintReferenceNote, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
+import { isReferenceTheme, createReferenceNoteCache, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
 import { NetEaseAudio } from './netease-audio.js';
 import { neteaseTrack } from './netease-tracks.js';
 import { localAudioStore, localAudioOffsets } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
 import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
-import { initLanguage, translate, tr, songName } from './i18n.js';
+import { translate, tr, songName } from './i18n.js';
 import { chartIdentity, practiceResults, resultPercent, resultTime } from './practice-results.js';
 import { hitSound } from './hit-sound.js';
 import { createMetronomeWav } from './metronome.js';
@@ -83,6 +83,7 @@ const canvas = els.stage;
 const ctx = canvas.getContext('2d');
 const backdropCanvas = $('stageBackdrop');
 const backdropCtx = backdropCanvas?.getContext('2d');
+const referenceNotes = createReferenceNoteCache();
 const portraitQuery = window.matchMedia?.('(orientation:portrait) and (max-width:600px)');
 const compactQuery = window.matchMedia?.('(pointer:coarse), (orientation:portrait) and (max-width:600px), (orientation:landscape) and (max-height:600px)');
 const coarseQuery = window.matchMedia?.('(pointer:coarse)');
@@ -730,6 +731,10 @@ async function useOnline(provider = 'youtube') {
       if (audio !== player || sourceType !== 'song') return;
       if (state === 'ratechange') {
         syncOnlinePlaybackRate(player,error);
+      } else if (state === 'sourcechange') {
+        const zh=`正在尝试备用音源（${error.index}/${error.total}）…`, en=`Trying another audio source (${error.index}/${error.total})…`, ja=`別の音源を試しています（${error.index}/${error.total}）…`;
+        if (domesticNotice) { domesticNotice.hidden=false;domesticNotice.textContent=tr(zh,en,ja); }
+        setMessage(zh,true,0,en,ja);
       } else if (state === 2 && isPlaying) {
         pause(); setMessage('在线播放器已暂停，请使用上方按钮继续。');
       } else if (state === 0 && isPlaying) completePass();
@@ -822,8 +827,8 @@ function notePath(x,y,radius,shape) {
     ctx.bezierCurveTo(x-radius*.72,y+radius,x-radius*1.28,y+radius*.15,x-radius*.62,y-radius*.55);ctx.lineTo(x-radius*.44,y-radius*.45);ctx.closePath();
   } else ctx.arc(x,y,radius,0,Math.PI*2);
 }
-function drawNote(x, y, radius, isHold, compact) {
-  if (paintReferenceNote(ctx, themeId, x, y, radius, isHold)) return;
+function drawNote(x, y, radius, isHold, compact, dpr) {
+  if (referenceNotes.draw(ctx, themeId, x, y, radius, isHold, dpr)) return;
   const colors=isHold ? currentTheme.hold : currentTheme.tap;
   ctx.save(); ctx.shadowColor=rgba(colors[1],.7); ctx.shadowBlur=compact ? 7 : 13;
   notePath(x,y,radius,currentTheme.shape);ctx.fillStyle=colors[2];ctx.fill();
@@ -915,10 +920,10 @@ function renderStage(songMs) {
       }
     }
     if (isReferenceTheme(themeId) && note.holdMs > 0 && tailY >= clipTop-radius && tailY <= h+radius) {
-      drawNote(x,tailY,radius,true,compact);
+      drawNote(x,tailY,radius,true,compact,dpr);
     }
-    if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0,compact);
-    else if (isReferenceTheme(themeId) && note.status === 'holding') drawNote(x,Math.min(hitY,headY),radius,true,compact);
+    if (note.status === 'pending') drawNote(x,headY,radius,note.holdMs>0,compact,dpr);
+    else if (isReferenceTheme(themeId) && note.status === 'holding') drawNote(x,Math.min(hitY,headY),radius,true,compact,dpr);
   }
 
   ctx.save();
@@ -1185,6 +1190,6 @@ window.addEventListener('blur',()=>{ if (playPending) stopAudio(); const wasPlay
 document.addEventListener('visibilitychange',()=>{ if (document.hidden && playPending) stopAudio(); if (document.hidden && isPlaying) pause(); if (document.hidden && held.size) { releaseHeldAt(previewMs); updateStats(); } if (!document.hidden) scheduleStageFrame(); });
 window.addEventListener('resize',scheduleStageFrame);
 
-initLanguage(); renderKeys(); updateMeta(); refreshRangeUi(); updateStats(); updateTime(0);
+renderKeys(); updateMeta(); refreshRangeUi(); updateStats(); updateTime(0);
 replaceAudio(makeDemoAudio(), 'demo');
 scheduleStageFrame();

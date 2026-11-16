@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NetEaseAudio } from '../dist/src/netease-audio.js';
+import { neteaseSources, rememberNeteaseSource } from '../dist/src/netease-source-order.js';
 import { neteaseMetingStream, neteasePage, neteaseSecureStream, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
 import { resolveTrack } from '../functions/api/netease/[id].js';
 
@@ -102,6 +103,38 @@ test('a source change while unlocking retries playback after metadata loads', as
   assert.equal(media.muted,false);
   assert.equal(media.paused,true);
   audio.destroy();
+});
+
+test('a source that actually plays is preferred next time and a failure still tries the alternatives', async () => {
+  const values=new Map();
+  const storage={getItem:key=>values.get(key) ?? null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+  const firstMedia=new FakeMedia(), changes=[];
+  const first=new NetEaseAudio({id:2014247586,durationSeconds:141},(...event)=>changes.push(event),()=>firstMedia,storage);
+  firstMedia.emit('error');
+  assert.equal(firstMedia.src,neteaseSecureStream(2014247586));
+  await Promise.resolve();
+  assert.deepEqual(changes.at(-1),['sourcechange',{index:2,total:3}]);
+  firstMedia.emit('loadedmetadata');await first.ready;await first.play();
+  first.destroy();
+
+  const nextMedia=new FakeMedia();
+  const next=new NetEaseAudio({id:2014247586,durationSeconds:141},()=>{},()=>nextMedia,storage);
+  assert.equal(nextMedia.src,neteaseSecureStream(2014247586),'the confirmed route is tried first');
+  nextMedia.emit('error');
+  assert.equal(nextMedia.src,neteaseMetingStream(2014247586),'a failed preferred route does not prevent fallback');
+  nextMedia.emit('loadedmetadata');await next.ready;next.destroy();
+  assert.equal(neteaseSources(2014247586,storage)[0].name,'meting','a failed preference is cleared');
+});
+
+test('audio route preferences expire and unavailable storage leaves the original order intact', () => {
+  const values=new Map();
+  const storage={getItem:key=>values.get(key) ?? null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+  rememberNeteaseSource('direct',storage,1000);
+  assert.equal(neteaseSources(1,storage,2000)[0].name,'direct');
+  assert.equal(neteaseSources(1,storage,1000+24*60*60*1000)[0].name,'meting');
+  const blocked={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');},removeItem(){throw Error('blocked');}};
+  assert.doesNotThrow(()=>rememberNeteaseSource('site',blocked));
+  assert.equal(neteaseSources(1,blocked)[0].name,'meting');
 });
 
 test('the secure resolver permits only catalog songs and HTTPS provider redirects', async () => {

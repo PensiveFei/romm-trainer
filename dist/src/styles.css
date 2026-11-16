@@ -41,6 +41,8 @@ button, a { touch-action: manipulation; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #f7d782; outline-offset: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.feature-notice { position:fixed; z-index:150; left:50%; bottom:max(22px,env(safe-area-inset-bottom)); transform:translateX(-50%); max-width:90vw; padding:9px 16px; border:1px solid #d5bd8a; border-radius:20px; color:#fff4dd; background:#20283aef; box-shadow:0 4px 18px #0008; font-size:13px; text-align:center; }
+.feature-notice[hidden] { display:none; }
 
 .game-frame {
   min-height: 100vh;

@@ -1,9 +1,11 @@
 import { favorites } from './favorites.js';
 import { tr, songName, groupName, songMatches } from './i18n.js';
 import { practiceResults, resultTime, resultPercent } from './practice-results.js';
-import { neteaseTrack, neteasePage, neteaseMetingStream, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
+import { neteaseTrack, neteasePage } from './netease-tracks.js';
+import { neteaseSources, rememberNeteaseSource, forgetNeteaseSource } from './netease-source-order.js';
 import { setCoverImage } from './cover-images.js';
 import { loadCatalog } from './catalog.js';
+import { loadPractice } from './feature-loader.js';
 
 const $ = id => document.getElementById(id);
 const view=$('libraryView'), groupsEl=$('libraryGroups'), detail=$('libraryDetail'), search=$('librarySearch');
@@ -14,7 +16,7 @@ const gameFrame=document.querySelector('.game-frame');
 const groupColors={Encounter2:'#29263f',NodKrai3:'#292747',Magic:'#30214b',NodKrai2:'#282a46',NodKrai1:'#2c2944',Natlan2:'#512c31',Natlan:'#542c30',Mondstadt:'#273841',Liyue:'#3b302d',Inazuma:'#3c2d48',Sumeru:'#273c30',Fontaine:'#29384a'};
 const stateLabel=status=>({ready:tr('可练习','Playable'),review:tr('谱面待核对','Chart under review'),missing:tr('暂缺谱面','Chart unavailable')})[status] || '';
 let catalog=null, selected=null, groupFilter=null, favoriteFilter=false, statusFilter='all', returnTo='practice';
-let groupsDirty=true;
+let groupsDirty=true, practiceLoading=false;
 const deferredCovers=new WeakMap();
 const coverObserver=typeof IntersectionObserver==='function' ? new IntersectionObserver(entries=>{
   for (const entry of entries) if (entry.isIntersecting) {
@@ -22,6 +24,31 @@ const coverObserver=typeof IntersectionObserver==='function' ? new IntersectionO
     coverObserver.unobserve(entry.target);deferredCovers.delete(entry.target);load?.();
   }
 },{root:groupsEl,rootMargin:'300px'}) : null;
+// Keep all songs searchable and keyboard-focusable, but defer the artwork and
+// decorative DOM until a tile is close to the scroll viewport.
+const tileSongs=new WeakMap();
+const pendingTiles=new Set();
+let tileFramePending=false;
+const tileObserver=typeof IntersectionObserver==='function' ? new IntersectionObserver(entries=>{
+  for (const entry of entries) if (entry.isIntersecting) pendingTiles.add(entry.target);
+  scheduleTiles();
+},{root:groupsEl,rootMargin:'300px'}) : null;
+
+function scheduleTiles() {
+  if (tileFramePending || !pendingTiles.size || view.hidden) return;
+  tileFramePending=true;
+  requestAnimationFrame(()=>{
+    tileFramePending=false;
+    if (view.hidden) return;
+    const started=performance.now();let processed=0;
+    for (const tile of pendingTiles) {
+      pendingTiles.delete(tile);
+      if (tile.isConnected) hydrateTile(tile);
+      if (++processed>=8 || performance.now()-started>=6) break;
+    }
+    scheduleTiles();
+  });
+}
 
 function element(tag, className, text) {
   const node=document.createElement(tag);
@@ -55,7 +82,7 @@ function renderDetails() {
   detail.replaceChildren();
   detail.scrollTop=0;
   if (hadPreview) window.dispatchEvent(new Event('romm:audio-preview-end'));
-  start.disabled=!selected || selected.status!=='ready';
+  start.disabled=practiceLoading || !selected || selected.status!=='ready';
   updateFavoriteButton();
   if (!selected) { detail.append(element('div','library-empty',tr('选择一首曲目','Choose a song'))); return; }
   const song=selected, hero=coverFor(song,'detail-cover'), title=element('div','detail-name');
@@ -98,10 +125,14 @@ function renderDetails() {
       if (!mount.hidden) {const current=mount.querySelector('audio');if(current) current.pause();mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
       const frame=element(domestic ? 'audio' : 'iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
       if (domestic) {
-        const sources=[neteaseMetingStream(domestic.id),neteaseSecureStream(domestic.id),neteaseStream(domestic.id)];
+        const sources=neteaseSources(domestic.id);
         let sourceIndex=0;
-        frame.src=sources[sourceIndex];frame.controls=true;frame.preload='none';
-        frame.addEventListener('error',()=>{if(sourceIndex+1>=sources.length)return;frame.src=sources[++sourceIndex];frame.load();});
+        frame.src=sources[sourceIndex].url;frame.controls=true;frame.preload='none';
+        frame.addEventListener('playing',()=>{
+          const duration=frame.duration;
+          if (!Number.isFinite(duration) || duration<=0 || duration+1.5>=domestic.durationSeconds) rememberNeteaseSource(sources[sourceIndex].name);
+        });
+        frame.addEventListener('error',()=>{forgetNeteaseSource(sources[sourceIndex].name);if(sourceIndex+1>=sources.length)return;frame.src=sources[++sourceIndex].url;frame.load();});
       }
       else {frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;}
       window.dispatchEvent(new Event('romm:audio-preview-start'));
@@ -111,8 +142,31 @@ function renderDetails() {
     audio.append(toggle,link,mount);detail.append(audio);
   }
 }
+function hydrateTile(button) {
+  if (!button.classList.contains('song-tile-lazy')) return;
+  const song=tileSongs.get(button);
+  if (!song) return;
+  pendingTiles.delete(button);tileObserver?.unobserve(button);
+  const dot=element('span','song-status-dot '+song.status); dot.setAttribute('aria-hidden','true');
+  button.replaceChildren(coverFor(song,'song-cover'),dot,element('span','song-name',songName(song)));
+  if (favorites.has(song.id)) { const star=element('span','song-favorite-mark','★');star.setAttribute('aria-hidden','true');button.append(star); }
+  button.classList.remove('song-tile-lazy');
+}
+groupsEl.addEventListener('click',event=>{
+  const button=event.target.closest?.('.song-tile');
+  const song=button && groupsEl.contains(button) ? tileSongs.get(button) : null;
+  if (!song) return;
+  hydrateTile(button);selected=song;
+  groupsEl.querySelectorAll('.song-tile[aria-pressed="true"]').forEach(el=>el.setAttribute('aria-pressed','false'));
+  button.setAttribute('aria-pressed','true'); renderDetails();
+});
+groupsEl.addEventListener('focusin',event=>{
+  const button=event.target.closest?.('.song-tile');
+  if (button && groupsEl.contains(button)) hydrateTile(button);
+});
 function renderGroups(scrollToSelection=false) {
   coverObserver?.disconnect();
+  tileObserver?.disconnect();pendingTiles.clear();
   const fragment=document.createDocumentFragment();
   const term=search.value.trim(); let matches=0, selectedTile=null;
   for (const group of catalog.groups) {
@@ -124,18 +178,12 @@ function renderGroups(scrollToSelection=false) {
     const heading=element('div','album-title'); heading.append(element('span','',groupName(group)),element('span','','✧  ♫  ✧')); section.append(heading);
     const tiles=element('div','album-songs');
     for (const song of songs) {
-      const button=element('button','song-tile'); button.type='button';
+      const button=element('button','song-tile song-tile-lazy',songName(song)); button.type='button';
       const coverNote=song.coverKind==='soundtrack'?tr('，使用原声专辑图',', soundtrack artwork'):'';
       button.setAttribute('aria-label',`${songName(song)} · ${stateLabel(song.status)}${coverNote}`); button.setAttribute('aria-pressed',String(selected?.id===song.id));
       button.title=`${songName(song)} · ${stateLabel(song.status)}${coverNote}`;
-      const dot=element('span','song-status-dot '+song.status); dot.setAttribute('aria-hidden','true');
-      button.append(coverFor(song,'song-cover'),dot,element('span','song-name',songName(song)));
-      if (favorites.has(song.id)) { const star=element('span','song-favorite-mark','★');star.setAttribute('aria-hidden','true');button.append(star); }
-      button.addEventListener('click',()=>{
-        selected=song;
-        groupsEl.querySelectorAll('.song-tile[aria-pressed="true"]').forEach(el=>el.setAttribute('aria-pressed','false'));
-        button.setAttribute('aria-pressed','true'); renderDetails();
-      });
+      tileSongs.set(button,song);
+      if (tileObserver) tileObserver.observe(button); else hydrateTile(button);
       tiles.append(button);
       if (selected?.id===song.id) selectedTile=button;
     }
@@ -143,6 +191,7 @@ function renderGroups(scrollToSelection=false) {
   }
   if (!matches) fragment.append(element('p','library-loading',favoriteFilter && !term && statusFilter==='all'?tr('还没有收藏曲目。可在歌曲详情下方点击星标收藏。','No favorites yet. Select the star in a song’s details to save it.'):tr('没有找到符合条件的歌曲。','No songs match these filters.','条件に合う楽曲が見つかりません。')));
   groupsEl.replaceChildren(fragment);groupsDirty=false;
+  scheduleTiles();
   const all=catalog.groups.flatMap(group=>group.songs);
   count.textContent=groupFilter || favoriteFilter || term || statusFilter!=='all' ? tr(`${matches} 首曲目`,`${matches} ${matches===1?'song':'songs'}`,`${matches}曲`) : tr(`${all.length} 首曲目 · ${all.filter(song=>song.status==='ready').length} 首可练习`,`${all.length} songs · ${all.filter(song=>song.status==='ready').length} playable`,`${all.length}曲 · ${all.filter(song=>song.status==='ready').length}曲を練習可能`);
   if (scrollToSelection && selectedTile) scrollToTile(selectedTile);
@@ -173,7 +222,7 @@ function show(options={}) {
   statusFilter='all'; if(statusSelect)statusSelect.value='all';
   search.value='';
   if (previousFilter[0]!==groupFilter || previousFilter[1]!==favoriteFilter || previousFilter[2]!==statusFilter || previousFilter[3]) groupsDirty=true;
-  $('homeView').hidden=true; view.hidden=false; gameFrame.inert=true;
+  $('homeView').hidden=true; gameFrame.inert=true;
   window.dispatchEvent(new Event('romm:library-open'));
   if (catalog) {
     const group=catalog.groups.find(item=>item.id===groupFilter);
@@ -181,22 +230,23 @@ function show(options={}) {
     const previousId=selected?.id;
     chooseInFilter();
     if (selected?.id!==previousId) groupsDirty=true;
+    // Populate the detail pane while hidden so resetting its scroll position
+    // cannot force a layout of the entire newly constructed song grid.
+    renderDetails();
     if (groupsDirty) renderGroups(true);
     else scrollToTile(groupsEl.querySelector('.song-tile[aria-pressed="true"]'));
-    renderDetails();
   }
+  view.hidden=false;scheduleTiles();
   close.setAttribute('aria-label',returnTo==='home'?tr('返回首页','Return home'):tr('返回练习','Return to practice'));
   close.focus();
 }
 function hide(toPractice=false) {
   // Removing the player stops a preview before returning to the practice view.
-  if (detail.querySelector('.library-audio-mount iframe')) renderDetails();
+  if (detail.querySelector('.library-audio-mount iframe, .library-audio-mount audio')) renderDetails();
   view.hidden=true;
   if (!toPractice && returnTo==='home') window.dispatchEvent(new Event('romm:show-home'));
   else {gameFrame.inert=false;window.dispatchEvent(new Event('romm:practice-visible'));$('libraryOpen').focus();}
 }
-$('libraryOpen').addEventListener('click',()=>show());
-$('libraryDrawerButton').addEventListener('click',()=>show());
 window.addEventListener('romm:open-library',event=>show(event.detail || {}));
 close.addEventListener('click',()=>hide());
 function updateFilters() {
@@ -209,9 +259,21 @@ function updateFilters() {
 }
 search.addEventListener('input',updateFilters);
 statusSelect?.addEventListener('change',()=>{statusFilter=['ready','review','missing'].includes(statusSelect.value)?statusSelect.value:'all';updateFilters();});
-start.addEventListener('click',()=>{
-  if (!selected || selected.status!=='ready') return;
-  window.dispatchEvent(new CustomEvent('romm:select-song',{detail:selected})); hide(true);
+start.addEventListener('click',async()=>{
+  if (practiceLoading || !selected || selected.status!=='ready') return;
+  const chosen=selected, label=start.querySelector('span:nth-child(2)');
+  practiceLoading=true;start.disabled=true;start.setAttribute('aria-busy','true');
+  if (label) label.textContent=tr('正在打开…','Opening…','読み込み中…');
+  try {
+    await loadPractice();
+    if (view.hidden || selected!==chosen) return;
+    window.dispatchEvent(new CustomEvent('romm:select-song',{detail:chosen})); hide(true);
+  } catch {
+    if (!view.hidden) detail.append(element('p','library-loading',tr('练习加载失败，请检查网络后重试。','Practice could not load. Check your connection and retry.','練習の読み込みに失敗しました。接続を確認して再試行してください。')));
+  } finally {
+    practiceLoading=false;start.disabled=!selected || selected.status!=='ready';start.removeAttribute('aria-busy');
+    if (label) label.textContent=tr('前往练习','Start practice','練習へ');
+  }
 });
 favoriteButton.addEventListener('click',()=>{
   if (!selected) return;

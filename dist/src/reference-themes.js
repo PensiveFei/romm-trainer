@@ -140,6 +140,35 @@ export function paintReferenceNote(ctx,id,x,y,radius,isHold) {
   ctx.shadowColor=colors[3];ctx.shadowBlur=.10;NOTE_PAINTERS[id](ctx,colors,isHold);ctx.restore();return true;
 }
 
+// Reference notes have many paths and petals. Rasterize each appearance once
+// at the stage's resolution, then reuse it without changing note positions.
+export function createReferenceNoteCache(createCanvas=()=>document.createElement('canvas')) {
+  const sprites=new Map();
+  return {
+    draw(ctx,id,x,y,radius,isHold,dpr=1) {
+      if (!isReferenceTheme(id)) return false;
+      if (typeof ctx.drawImage!=='function' || !Number.isFinite(radius) || radius<=0) return paintReferenceNote(ctx,id,x,y,radius,isHold);
+      const scale=Math.max(1,Math.min(2,Number(dpr)||1));
+      const key=[id,isHold?'hold':'tap',Math.round(radius*1000),scale].join(':');
+      let sprite=sprites.get(key);
+      if (!sprite) {
+        try {
+          const side=Math.ceil(radius*2.6), canvas=createCanvas();
+          canvas.width=Math.ceil(side*scale);canvas.height=Math.ceil(side*scale);
+          const target=canvas.getContext('2d');
+          if (!target) return paintReferenceNote(ctx,id,x,y,radius,isHold);
+          target.setTransform(scale,0,0,scale,0,0);
+          paintReferenceNote(target,id,side/2,side/2,radius,isHold);
+          sprite={canvas,side};sprites.set(key,sprite);
+          if (sprites.size>32) sprites.delete(sprites.keys().next().value);
+        } catch { return paintReferenceNote(ctx,id,x,y,radius,isHold); }
+      }
+      ctx.drawImage(sprite.canvas,x-sprite.side/2,y-sprite.side/2,sprite.side,sprite.side);
+      return true;
+    }
+  };
+}
+
 const HOLD_COLORS = {moonfeather:['#f4baff','#db6fe7'],feast:['#d8e1ff','#818bff'],plum:['#ffd38a','#f55e46'],lotus:['#fff0ff','#dca6ff'],flameheart:['#ffc0de','#ed4d9b'],whitestar:['#d5e9ff','#4d9eff'],icefang:['#b9faff','#4d9ef2'],sakura:['#cefbff','#4fc4ff']};
 export function paintReferenceHold(ctx,id,x,top,bottom,radius) {
   if(!isReferenceTheme(id))return false;
