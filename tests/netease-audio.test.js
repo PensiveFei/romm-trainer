@@ -77,6 +77,19 @@ test('the secure resolver permits only catalog songs and HTTPS provider redirect
   assert.equal((await resolveTrack('2014247586',response({...validSong,fee:1}))).status,502);
 });
 
+test('the secure resolver can use another provider endpoint and reports failures without exposing URLs', async () => {
+  const validSong = {id:2014247586,code:200,fee:0,freeTrialInfo:null,url:'http://m801.music.126.net/example.mp3?token=1'};
+  const alternate = await resolveTrack('2014247586', async url => {
+    if (new URL(url).hostname !== 'interface.music.163.com') throw new TypeError('network failure');
+    return {ok:true,json:async()=>({code:200,data:[validSong]})};
+  });
+  assert.equal(alternate.status,302);
+  assert.match(alternate.headers.get('location'),/^https:/);
+  const failed = await resolveTrack('2014247586', async () => ({ok:false,status:403}));
+  assert.equal(failed.status,502);
+  assert.equal(failed.headers.get('x-romm-resolver'),'main-http-403,interface-http-403,interface3-http-403');
+});
+
 test('closing a still-loading source cancels its readiness and ignores late events', async () => {
   const media = new FakeMedia(), events = [];
   const audio = new NetEaseAudio({id:1,durationSeconds:141}, (...event) => events.push(event), () => media);
