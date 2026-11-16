@@ -168,10 +168,17 @@ test('every YouTube catalog source has a matched domestic source with enough rec
 test('mapped playable recordings extend beyond the end of their last note', async () => {
   const catalog = JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
   const songs = catalog.groups.flatMap(group => group.songs).filter(song => song.status === 'ready' && neteaseTrack(song));
-  assert.equal(songs.length, 85);
+  assert.equal(songs.length, 125);
   for (const song of songs) {
     const chart = JSON.parse(await readFile(new URL('../dist/' + song.chartUrl.replace(/^\.\//,''), import.meta.url), 'utf8'));
     const lastNoteMs = Math.max(...chart.notes.map(note => note.atMs + (note.holdMs || 0)));
     assert.ok(neteaseTrack(song).durationSeconds * 1000 >= lastNoteMs + 250, song.title);
   }
+});
+
+test('all remaining playable songs without a matched recording are explicit', async () => {
+  const catalog = JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
+  const missing = catalog.groups.flatMap(group => group.songs).filter(song => song.status === 'ready' && !neteaseTrack(song));
+  assert.deepEqual(missing.map(song => song.id).sort(), ['_GMusic122','_GMusic131','_GMusic132']);
+  assert.equal(neteaseTrack({id:'_GMusic93'}).id,3341051484); // Album title: 亘古的极星.
 });
