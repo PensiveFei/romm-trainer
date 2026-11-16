@@ -43,17 +43,22 @@ This is an unofficial fan project and is not affiliated with miHoYo, HoYoverse, 
 
 ## Getting Started
 
-Node.js 20 or later is required. No third-party dependencies need to be installed. Run the following command and open the displayed address in a desktop browser:
+Node.js 20.19+, 22.13+, or 24+ is required. The site has no third-party runtime dependencies. Install the development tools and start the site:
 
 ```sh
+npm ci
 npm start
 ```
 
-Run the core judgement tests:
+Run lint, tests, and the coverage report:
 
 ```sh
+npm run lint
 npm test
+npm run test:coverage
 ```
+
+Coverage includes frontend files that the tests do not load. The detailed report is at `coverage/lcov-report/index.html`; browser end-to-end tests are not included yet.
 
 Default keys: A, S, D, J, K, L. Press Space to pause or resume. Open “Charts & Settings” at the top right to import files and adjust the practice section or key bindings. Choose a language under “语言 / Language” in settings. On the home screen, browse albums, open favorites, and adjust practice settings; select the star below a song's details to add it to your favorites.
 
@@ -71,6 +76,8 @@ The production site is served as static files by Cloudflare Pages; DNS and TLS a
 After adding or replacing cover artwork, run `node scripts/generate-cover-thumbnails.mjs` with ImageMagick installed and commit the generated previews. Deployments use the checked-in previews and do not require ImageMagick.
 
 Pushes to `main` are built and published automatically; `qianyin.pages.dev` stays available as well.
+
+GitHub Actions runs lint, tests, and a build on Node.js 20, 22, and 24 for pushes and pull requests, and produces coverage on Node.js 24. These checks run independently of Cloudflare's automatic deployment and do not by themselves block publication from `main`.
 
 ## Song Library
 

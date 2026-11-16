@@ -7,7 +7,23 @@
   "scripts": {
     "start": "node scripts/server.mjs",
     "build": "node scripts/pages-build.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "lint": "eslint dist/src functions scripts tests eslint.config.js --max-warnings=0",
+    "test:coverage": "c8 node --test"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "c8": "^12.0.0",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  },
+  "overrides": {
+    "test-exclude": {
+      "glob": "^14.0.6",
+      "minimatch": "^11.0.8"
+    }
+  }
 }

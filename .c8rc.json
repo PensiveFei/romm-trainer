@@ -1,0 +1,11 @@
+{
+  "all": true,
+  "include": ["dist/src/**/*.js", "functions/**/*.js"],
+  "reporter": ["text", "lcov", "json-summary"],
+  "reports-dir": "coverage",
+  "check-coverage": true,
+  "statements": 70,
+  "lines": 70,
+  "branches": 75,
+  "functions": 75
+}

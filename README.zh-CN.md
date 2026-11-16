@@ -43,17 +43,22 @@ Repertoire of Myriad Melodies Trainer
 
 ## 运行
 
-需要 Node.js 20 或更高版本，无需安装第三方依赖。运行以下命令后，用 PC 浏览器打开终端中显示的地址：
+需要 Node.js 20.19+、22.13+ 或 24+。运行网站不需要第三方运行时依赖；安装开发检查工具并启动网站：
 
 ```sh
+npm ci
 npm start
 ```
 
-运行核心判定测试：
+运行代码检查、测试和覆盖率报告：
 
 ```sh
+npm run lint
 npm test
+npm run test:coverage
 ```
+
+覆盖率包括未被测试加载的前端代码，详细报告位于 `coverage/lcov-report/index.html`；目前不包含浏览器端的端到端测试。
 
 默认键位为 A、S、D、J、K、L；空格键用于暂停或继续。首页可浏览专辑、打开收藏和调整练习设置；在曲目详情下方点击星标即可收藏。练习页的「曲谱与设置」可导入文件并调整练习区间。
 
@@ -69,6 +74,8 @@ npm test
 `npm run build` 会把 `dist/` 复制到 `build/`，叠加 `deploy/` 下的 `_headers` 与 `404.html`，并根据脚本、样式、曲库目录和谱面文件生成版本号。这一步用于避免缓存导致页面、脚本、曲库与谱面数据错配。
 
 推送到 `main` 后由 Cloudflare Pages 自动构建发布；`qianyin.pages.dev` 同时可用。
+
+GitHub Actions 会在推送和拉取请求时检查 Node.js 20、22 和 24 的 lint、测试及构建，并在 Node.js 24 上生成覆盖率报告。该检查与 Cloudflare 自动部署独立运行，不会自行阻止 `main` 的发布。
 
 ## 曲目典藏
 
