@@ -41,6 +41,7 @@ function renderDetails() {
   const hadPreview=!!previousPreview;
   if (previousPreview?.tagName === 'AUDIO') previousPreview.pause();
   detail.replaceChildren();
+  detail.scrollTop=0;
   if (hadPreview) window.dispatchEvent(new Event('romm:audio-preview-end'));
   start.disabled=!selected || selected.status!=='ready';
   updateFavoriteButton();
