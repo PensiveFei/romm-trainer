@@ -11,6 +11,7 @@ import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
 import { initLanguage, translate, tr, songName } from './i18n.js';
 import { chartIdentity, practiceResults, resultPercent, resultTime } from './practice-results.js';
 import { hitSound } from './hit-sound.js';
+import { createMetronomeWav } from './metronome.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -628,35 +629,16 @@ localAudio.addEventListener('ended', () => { if (audio === localAudio && isPlayi
 
 function makeDemoAudio(durationMs = 32000, bpm = 120, firstBeat = 0, beatTimesMs = null) {
   // Original synthesized percussion backing, unrelated to the player's inputs.
-  const sampleRate = 22050, length = Math.ceil(durationMs / 1000 * sampleRate);
-  const data = new Float32Array(length);
-  const add = (time, duration, fn) => {
-    const start = Math.floor(time * sampleRate), count = Math.floor(duration * sampleRate);
-    for (let i=0;i<count && start+i<length;i++) data[start+i] += fn(i/sampleRate);
-  };
-  const beats=Array.isArray(beatTimesMs) && beatTimesMs.length ? beatTimesMs.map(t=>t/1000) : Array.from({length:Math.max(0,Math.ceil((durationMs/1000-firstBeat)*bpm/60))},(_,i)=>firstBeat+i*60/bpm);
-  for (let beat=0; beat<beats.length; beat++) {
-    const t = beats[beat];
-    const strong = beat % 4 === 0;
-    add(t,0.12,(s) => Math.sin(2 * Math.PI * (strong ? 82 : 105) * s) * Math.exp(-s * 35) * (strong ? 0.35 : 0.16));
-    add(t + (beats[beat+1] ? (beats[beat+1]-t)/2 : 30/bpm),0.045,(s) => Math.sin(2 * Math.PI * 1700 * s) * Math.exp(-s * 90) * 0.035);
-  }
-  const bytes = new ArrayBuffer(44 + length * 2), view = new DataView(bytes);
-  const text = (at,v) => { for (let i=0;i<v.length;i++) view.setUint8(at+i,v.charCodeAt(i)); };
-  text(0,'RIFF'); view.setUint32(4,36+length*2,true); text(8,'WAVE'); text(12,'fmt ');
-  view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
-  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true);
-  view.setUint16(32,2,true); view.setUint16(34,16,true); text(36,'data'); view.setUint32(40,length*2,true);
-  for (let i=0;i<length;i++) view.setInt16(44+i*2,Math.max(-1,Math.min(1,data[i]))*32767,true);
-  return URL.createObjectURL(new Blob([bytes],{type:'audio/wav'}));
+  return URL.createObjectURL(new Blob([createMetronomeWav(durationMs,bpm,firstBeat,beatTimesMs)],{type:'audio/wav'}));
 }
 function useDemo() {
+  const alreadyDemo=sourceType==='demo' && audio===localAudio && audioMode==='demo' && !!audioUrl && !audioFailed;
   selectionId++; stopAudio();
   chart = demoChart; sourceType = 'demo'; startMs = 0; endMs = chart.durationMs;
   currentIdentity=chartIdentity(sourceType,currentSong,chart);clearResult();
   musicStart = 0;
   updateMeta(); refreshRangeUi(); resetSession();
-  replaceAudio(makeDemoAudio(), 'demo');
+  if (!alreadyDemo) replaceAudio(makeDemoAudio(), 'demo');
   setMessage('已恢复原创示范谱与节拍伴奏。', true);
 }
 async function useSong(song = DEFAULT_SONG) {
