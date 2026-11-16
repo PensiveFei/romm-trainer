@@ -68,6 +68,8 @@ The production site is served as static files by Cloudflare Pages; DNS and TLS a
 
 `npm run build` copies `dist/` into `build/`, adds `_headers` and `404.html` from `deploy/`, and generates a version from the scripts, styles, song catalog, and charts. The version keeps cached pages, code, catalog data, and charts in sync.
 
+After adding or replacing cover artwork, run `node scripts/generate-cover-thumbnails.mjs` with ImageMagick installed and commit the generated previews. Deployments use the checked-in previews and do not require ImageMagick.
+
 Pushes to `main` are built and published automatically; `qianyin.pages.dev` stays available as well.
 
 ## Song Library

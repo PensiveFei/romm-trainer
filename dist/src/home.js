@@ -1,5 +1,7 @@
 import { favorites } from './favorites.js';
-import { tr, songName, groupName, catalogUrl } from './i18n.js';
+import { tr, songName, groupName } from './i18n.js';
+import { setCoverImage } from './cover-images.js';
+import { loadCatalog } from './catalog.js';
 
 const $=id=>document.getElementById(id);
 const home=$('homeView'), gameFrame=document.querySelector('.game-frame');
@@ -19,7 +21,7 @@ function el(tag,className,text) {
   if(text!==undefined)node.textContent=text;
   return node;
 }
-function artFor(group) {const file=albumArt[group.id];return file?`./assets/covers/${file}`:null;}
+function artFor(group) {const file=albumArt[group.id];return file ? (file.startsWith('../') ? `./assets/${file.slice(3)}` : `./assets/covers/${file}`) : null;}
 function openLibrary(options={}) {window.dispatchEvent(new CustomEvent('romm:open-library',{detail:{from:'home',...options}}));}
 function openPractice(song) {
   home.hidden=true;gameFrame.inert=false;
@@ -35,7 +37,7 @@ function renderFeatured() {
     if(!song)continue;
     const button=el('button','featured-song');button.type='button';button.setAttribute('aria-label',tr(`练习 ${song.title}`,`Practice ${songName(song)}`,`${songName(song)}を練習`));
     const picture=el('span','featured-picture');
-    if(song.cover){const image=el('img');image.src=song.cover;image.alt='';picture.append(image);}else picture.textContent='♫';
+    if(song.cover){const image=el('img');image.alt='';setCoverImage(image,song.cover,{thumbnail:true});picture.append(image);}else picture.textContent='♫';
     const details=el('span','featured-copy'),line=el('span','featured-level');
     line.append(el('span','featured-keys',tr('六键','6 Keys')),el('span','featured-stars','★'.repeat(song.levels?.[3] || 0)),el('span','featured-diamonds','◆'.repeat(Math.max(0,10-(song.levels?.[3] || 0)))));
     details.append(el('strong','',songName(song)),line);
@@ -46,7 +48,7 @@ function renderHero() {
   if(!catalog)return;
   const id=heroIds[heroIndex], group=catalog.groups.find(item=>item.id===id);
   if(!group)return;
-  $('homeHeroImage').src=artFor(group) || '';
+  $('homeHeroImage').src=id==='Encounter2'?'./assets/home-hero.jpg':artFor(group) || '';
   $('homeHeroImage').style.objectPosition=id==='Encounter2'?'center 25%':'center 47%';
   $('homeHeroTitle').textContent=groupName(group);
   $('homeHeroOpen').setAttribute('aria-label',tr(`浏览 ${group.title} 专辑`,`Browse ${groupName(group)} album`,`${groupName(group)}のアルバムを見る`));
@@ -61,7 +63,7 @@ function renderHero() {
 function makeRecord({title,image,kind,onClick,count}) {
   const button=el('button','album-record');button.type='button';button.title=title;button.setAttribute('aria-label',count===undefined?title:tr(`${title}，${count} 首`,`${title}, ${count} ${count===1?'song':'songs'}`,`${title}、${count}曲`));
   const sleeve=el('span','album-sleeve '+(kind || ''));
-  if(image){const img=el('img');img.src=image;img.alt='';img.loading='lazy';sleeve.append(img);}
+  if(image){const img=el('img');img.alt='';img.loading='lazy';setCoverImage(img,image,{thumbnail:true});sleeve.append(img);}
   else sleeve.append(el('span','album-symbol',kind==='favorite'?'★':kind==='all'?'▦':'♫'));
   if(count!==undefined)sleeve.append(el('span','album-count',String(count)));
   button.append(el('span','album-disc'),sleeve,el('span','album-record-label',title));
@@ -143,6 +145,5 @@ setInterval(()=>{
 gameFrame.inert=true;
 
 try {
-  const response=await fetch(catalogUrl());if(!response.ok)throw Error('catalog');
-  catalog=await response.json();renderFeatured();renderHero();renderAlbums();
+  catalog=await loadCatalog();renderFeatured();renderHero();renderAlbums();
 } catch {featuredEl.replaceChildren(el('p','home-loading',tr('曲目加载失败，请检查网络后刷新。','Unable to load songs. Check your connection and refresh.')));renderAlbums();}
