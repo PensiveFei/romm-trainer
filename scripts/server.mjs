@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveTrack } from '../functions/api/netease/[id].js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg' };
@@ -9,6 +10,13 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const pathname = decodeURIComponent(url.pathname);
+    const neteaseId = pathname.match(/^\/api\/netease\/(\d+)$/)?.[1];
+    if (neteaseId && (req.method === 'GET' || req.method === 'HEAD')) {
+      const result = await resolveTrack(neteaseId);
+      res.writeHead(result.status, Object.fromEntries(result.headers));
+      res.end();
+      return;
+    }
     const filename = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
     if (filename !== root && !filename.startsWith(root + path.sep)) {
       res.writeHead(403).end('Forbidden');

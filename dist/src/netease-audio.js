@@ -1,4 +1,4 @@
-import { neteaseStream } from './netease-tracks.js';
+import { neteaseSecureStream, neteaseStream } from './netease-tracks.js';
 
 // Use the provider's stream as a normal media element so the practice clock
 // follows the actual playback position, including buffering and seeking.
@@ -10,6 +10,8 @@ export class NetEaseAudio {
     this.failed = false;
     this.destroyed = false;
     this.media = createAudio();
+    this.sources = [neteaseSecureStream(track.id), neteaseStream(track.id)];
+    this.sourceIndex = 0;
     this.media.preload = 'metadata';
     this.media.preservesPitch = true;
     this.settled = false;
@@ -18,12 +20,12 @@ export class NetEaseAudio {
         const duration = this.media.duration;
         // A restricted song can return a short preview instead of the recording.
         if (!Number.isFinite(duration) || duration + 1.5 < this.durationSeconds) {
-          this.fail(new Error('音源不完整或暂不可用'));
+          this.retryOrFail(new Error('音源不完整或暂不可用'));
           return;
         }
         if (!this.settled) { this.settled = true; this.resolveReady(); }
       },
-      error: () => this.fail(new Error('国内音源暂不可用')),
+      error: () => this.retryOrFail(new Error('国内音源暂不可用')),
       playing: () => { if (!this.destroyed) onState(1); },
       pause: () => { if (!this.destroyed && !this.media.ended) onState(2); },
       ended: () => { if (!this.destroyed) onState(0); },
@@ -32,8 +34,18 @@ export class NetEaseAudio {
     this.onState = onState;
     this.ready = new Promise((resolve, reject) => { this.resolveReady = resolve; this.rejectReady = reject; });
     for (const [name, listener] of Object.entries(this.listeners)) this.media.addEventListener(name, listener);
-    this.media.src = neteaseStream(track.id);
+    this.media.src = this.sources[0];
     this.media.load();
+  }
+
+  retryOrFail(error) {
+    if (this.destroyed || this.failed) return;
+    if (!this.settled && this.sourceIndex + 1 < this.sources.length) {
+      this.media.src = this.sources[++this.sourceIndex];
+      this.media.load();
+      return;
+    }
+    this.fail(error);
   }
 
   fail(error) {

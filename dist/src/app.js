@@ -737,7 +737,8 @@ async function useOnline(provider = 'youtube') {
   setMessage('正在准备官方在线音源，也可在设置中选择节拍伴奏。', true, 0);
   let timeout;
   try {
-    await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),8000);})]);
+    const waitMs = activeOnline.provider === 'netease' ? 22000 : 8000;
+    await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),waitMs);})]);
     if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
     updateAudioBadge();

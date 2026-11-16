@@ -56,11 +56,55 @@ const tracks = {
   '_GMusic140': [2750877664, 171946], // The Long Way Home
   '_GMusic150': [3411268918, 115663], // 须臾的舒闲 Transient Tranquility
   '_GMusic151': [3411283513, 184789], // 寂夜月如锋 Selenic Ascension
+  '_GMusic128': [3358787335, 162534], // 如生之不竭
+  '_GMusic130': [3348141934, 173528], // 野马尘埃
+  '_GMusic133': [3358806553, 269233], // 白鸽之诗
+  '_GMusic135': [3411282706, 164864], // 西风之歌（合奏）
+  '_GMusic136': [3358780008, 104060], // 柔月下的暗鸦
+  '_GMusic137': [3358787319, 125532], // 枯叶飞旋
+  '_GMusic138': [2756018761, 103223], // 晚祷的铃歌
+  '_GMusic115': [2613484736, 90718], // 魔女的茶话会
+  '_GMusic116': [3358779440, 119786], // 茶会之余
+  '_GMusic118': [2613484756, 123904], // 星界的眷盼
+  '_GMusic123': [2613484725, 94768], // 风轻云暖
+  '_GMusic124': [2613484729, 96000], // 飞鼠进行曲
+  '_GMusic103': [2756018746, 127262], // 船歌优稳
+  '_GMusic105': [2756034903, 191140], // 永夜与破晓的誓刃
+  '_GMusic106': [2756019215, 129253], // 新月的摇篮曲（其一）：伴月同眠
+  '_GMusic107': [2756019206, 99184], // 闲饮酣适
+  '_GMusic108': [2756036522, 126975], // 实力碾鸭！
+  '_GMusic94': [2674775198, 131512], // 幽谷舟咏·其三
+  '_GMusic95': [2147140935, 170855], // 烬火
+  '_GMusic73': [2657687361, 104025], // 镜中日暖
+  '_GMusic75': [2657687370, 108691], // 舒翼乘云
+  '_GMusic79': [2657697281, 150090], // 奉炽火以希望
+  '_GMusic64': [2635291858, 103884], // 逐火如弦
+  '_GMusic62': [2635291845, 117715], // 紫锦草的闲息
+  '_GMusic63': [2635291851, 117796], // 浪暖风柔
+  '_GMusic72': [2635292816, 95090], // 游光逐虹
+  '_GMusic26': [1481390532, 86986], // 有趣的挑战
+  '_GMusic29': [1492276426, 117421], // 杯中明月
+  '_GMusic45': [1992139167, 108213], // 喧繁之港
+  '_GMusic51': [2041859189, 200515], // 三千娑世御咏歌
+  '_GMusic58': [2156624907, 165797], // 终末的赦祷颂
+  '_GMusic59': [2130084924, 105808], // 灾蚀的痕影
+  '_GMusic60': [2100334024, 149520], // 轻涟
+  '_GMusic86': [2631333977, 215493], // 经过（中）
+  '_GMusic97': [2631336272, 217356], // 经过（日）
+  '_GMusic98': [2631336273, 219721], // 经过（英）
+  '_GMusic92': [2662252634, 177976], // 灼火之心（中）
+  '_GMusic99': [2662252635, 177976], // 灼火之心（英）
+  '_GMusic100': [2662251971, 177976], // 灼火之心（韩）
+  '_GMusic101': [2662252636, 177976], // 灼火之心（日）
 };
 
 export function neteaseTrack(song) {
-  const track = tracks[song?.id];
+  const track = Object.hasOwn(tracks, song?.id) ? tracks[song.id] : null;
   return track ? {id: track[0], durationSeconds: track[1] / 1000} : null;
+}
+
+export function isNeteaseTrackId(id) {
+  return Number.isSafeInteger(id) && Object.values(tracks).some(track => track[0] === id);
 }
 
 export function neteasePage(id) {
@@ -69,4 +113,8 @@ export function neteasePage(id) {
 
 export function neteaseStream(id) {
   return `https://music.163.com/song/media/outer/url?id=${id}.mp3`;
+}
+
+export function neteaseSecureStream(id) {
+  return `/api/netease/${id}`;
 }

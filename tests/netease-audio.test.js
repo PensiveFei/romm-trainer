@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NetEaseAudio } from '../dist/src/netease-audio.js';
-import { neteasePage, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
+import { neteasePage, neteaseSecureStream, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
+import { resolveTrack } from '../functions/api/netease/[id].js';
 
 class FakeMedia {
   constructor() { this.listeners = {}; this.currentTime = 0; this.duration = 141.051; this.paused = true; this.muted = false; this.playbackRate = 1; this.volume = 1; }
@@ -18,7 +19,7 @@ class FakeMedia {
 test('NetEase playback follows the media clock and can unlock without shifting the start', async () => {
   const media = new FakeMedia(), events = [];
   const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, (...event) => events.push(event), () => media);
-  assert.equal(media.src, neteaseStream(2014247586));
+  assert.equal(media.src, neteaseSecureStream(2014247586));
   media.emit('loadedmetadata');
   await audio.ready;
   audio.currentTime = 12.5;
@@ -45,9 +46,35 @@ test('a short preview or an unreadable stream does not become a practice source'
   media.duration = 30;
   const audio = new NetEaseAudio({id:1,durationSeconds:141}, () => {}, () => media);
   media.emit('loadedmetadata');
+  assert.equal(media.src, neteaseStream(1), 'an incomplete secure source retries the direct source');
+  media.emit('loadedmetadata');
   await assert.rejects(audio.ready, /不完整/);
   assert.equal(audio.failed, true);
   audio.destroy();
+});
+
+test('a failed secure connection retries the provider before reporting failure', async () => {
+  const media = new FakeMedia();
+  const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, () => {}, () => media);
+  media.emit('error');
+  assert.equal(media.src, neteaseStream(2014247586));
+  media.emit('loadedmetadata');
+  await audio.ready;
+  assert.equal(audio.failed, false);
+  audio.destroy();
+});
+
+test('the secure resolver permits only catalog songs and HTTPS provider redirects', async () => {
+  const validSong = {id:2014247586,code:200,fee:0,freeTrialInfo:null,url:'http://m801.music.126.net/example.mp3?token=1'};
+  const response = song => async () => ({ok:true,json:async()=>({code:200,data:[song]})});
+  const ok = await resolveTrack('2014247586',response(validSong));
+  assert.equal(ok.status,302);
+  assert.equal(ok.headers.get('location'),'https://m801.music.126.net/example.mp3?token=1');
+  assert.equal(ok.headers.get('cache-control'),'no-store');
+  assert.equal((await resolveTrack('123',response(validSong))).status,404);
+  assert.equal((await resolveTrack('2014247586',response({...validSong,url:'http://music.126.net.example.com/file'}))).status,502);
+  assert.equal((await resolveTrack('2014247586',response({...validSong,freeTrialInfo:{start:0,end:30}}))).status,502);
+  assert.equal((await resolveTrack('2014247586',response({...validSong,fee:1}))).status,502);
 });
 
 test('closing a still-loading source cancels its readiness and ignores late events', async () => {
@@ -73,4 +100,15 @@ test('every YouTube catalog source has a matched domestic source with enough rec
   }
   assert.equal(neteaseTrack({id:'_GMusic16'}).id, 2014247586);
   assert.equal(neteaseTrack({id:'not-a-song'}), null);
+});
+
+test('mapped playable recordings extend beyond the end of their last note', async () => {
+  const catalog = JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
+  const songs = catalog.groups.flatMap(group => group.songs).filter(song => song.status === 'ready' && neteaseTrack(song));
+  assert.equal(songs.length, 85);
+  for (const song of songs) {
+    const chart = JSON.parse(await readFile(new URL('../dist/' + song.chartUrl.replace(/^\.\//,''), import.meta.url), 'utf8'));
+    const lastNoteMs = Math.max(...chart.notes.map(note => note.atMs + (note.holdMs || 0)));
+    assert.ok(neteaseTrack(song).durationSeconds * 1000 >= lastNoteMs + 250, song.title);
+  }
 });

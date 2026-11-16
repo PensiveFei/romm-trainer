@@ -1,7 +1,7 @@
 import { favorites } from './favorites.js';
 import { tr, songName, groupName, songMatches, catalogUrl } from './i18n.js';
 import { practiceResults, resultTime, resultPercent } from './practice-results.js';
-import { neteaseTrack, neteasePage, neteaseStream } from './netease-tracks.js';
+import { neteaseTrack, neteasePage, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
 
 const $ = id => document.getElementById(id);
 const view=$('libraryView'), groupsEl=$('libraryGroups'), detail=$('libraryDetail'), search=$('librarySearch');
@@ -64,7 +64,8 @@ function renderDetails() {
     body.append(head,stars);row.append(body);detail.append(row);
   }
   const summary=element('p','detail-summary');
-  if (song.status==='ready') summary.textContent=tr(`传说 · ${song.noteCount} 个音符 · 六键练习谱。${song.audio?'提供官方在线原声入口，游戏剪辑同步待校准。':'提供节拍伴奏，可自行选择配套音频。'} 判定规则仍在校准中。`,`Legendary · ${song.noteCount} notes · 6-key practice chart. ${song.audio?'Online soundtrack available; synchronization may need adjustment.':'Metronome available; you can choose local audio.'} Judgment is still being calibrated.`,`レジェンド · ${song.noteCount} ノーツ · 6キー練習譜面。${song.audio?'公式オンライン音源を利用できます。同期は調整中です。':'メトロノームを利用できます。端末の音源も選択できます。'} 判定ルールは調整中です。`);
+  const hasSoundtrack=!!song.audio || !!neteaseTrack(song);
+  if (song.status==='ready') summary.textContent=tr(`传说 · ${song.noteCount} 个音符 · 六键练习谱。${hasSoundtrack?'提供官方在线原声入口，游戏剪辑同步待校准。':'提供节拍伴奏，可自行选择配套音频。'} 判定规则仍在校准中。`,`Legendary · ${song.noteCount} notes · 6-key practice chart. ${hasSoundtrack?'Online soundtrack available; synchronization may need adjustment.':'Metronome available; you can choose local audio.'} Judgment is still being calibrated.`,`レジェンド · ${song.noteCount} ノーツ · 6キー練習譜面。${hasSoundtrack?'公式オンライン音源を利用できます。同期は調整中です。':'メトロノームを利用できます。端末の音源も選択できます。'} 判定ルールは調整中です。`);
   else summary.textContent=song.status==='review'?tr('公开谱面存在数据疑点，核对后再开放练习。','This public chart needs verification before practice is available.'):tr('当前资料中尚未找到可用的传说谱面。','No usable Legendary chart has been found for this song yet.');
   detail.append(summary);
   const recent=practiceResults.recent(song.id);
@@ -83,7 +84,10 @@ function renderDetails() {
     toggle.addEventListener('click',()=>{
       if (!mount.hidden) {const current=mount.querySelector('audio');if(current) current.pause();mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
       const frame=element(domestic ? 'audio' : 'iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
-      if (domestic) {frame.src=neteaseStream(domestic.id);frame.controls=true;frame.preload='none';}
+      if (domestic) {
+        frame.src=neteaseSecureStream(domestic.id);frame.controls=true;frame.preload='none';
+        frame.addEventListener('error',()=>{if(frame.dataset.directFallback)return;frame.dataset.directFallback='true';frame.src=neteaseStream(domestic.id);frame.load();});
+      }
       else {frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;}
       window.dispatchEvent(new Event('romm:audio-preview-start'));
       mount.append(frame);mount.hidden=false;toggle.textContent=tr('收起试听','Close preview');toggle.setAttribute('aria-expanded','true');
