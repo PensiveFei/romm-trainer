@@ -33,16 +33,24 @@
     fetch('/build-info.json?audio-check=1',{cache:'no-store'}).then(r=>r.json()).then(info=>{version=info.version||version;}).catch(()=>{});
     function probe(name,url,item) {
       return new Promise(resolve=>{
-        const media=new Audio();let finished=false, metadata='';
+        const media=new Audio();let finished=false, metadata='', playbackCheck=null;
         const timer=setTimeout(()=>finish('连接超时'+metadata),18000);
         function finish(value) {
-          if(finished)return;finished=true;clearTimeout(timer);
+          if(finished)return;finished=true;clearTimeout(timer);clearTimeout(playbackCheck);
           media.pause();media.removeAttribute('src');media.load();
           item.textContent=name+'：'+value;resolve(name+'：'+value);
         }
         media.muted=true;media.preload='auto';
         media.addEventListener('loadedmetadata',()=>{metadata='，时长 '+Math.round(media.duration)+' 秒';});
-        media.addEventListener('playing',()=>finish('可以播放'+metadata));
+        media.addEventListener('playing',()=>{
+          if(playbackCheck!==null)return;
+          playbackCheck=setTimeout(()=>{
+            const position=Number.isFinite(media.currentTime)?media.currentTime.toFixed(1):'未知';
+            const duration=Number.isFinite(media.duration)?media.duration.toFixed(1):'未知';
+            finish('开始播放，2秒后进度 '+position+' 秒，上报时长 '+duration+' 秒');
+          },2000);
+        });
+        media.addEventListener('ended',()=>finish('播放过早结束'+metadata));
         media.addEventListener('error',()=>finish('加载失败（媒体错误 '+(media.error ? media.error.code : '未知')+'）'+metadata));
         media.src=url;
         try {

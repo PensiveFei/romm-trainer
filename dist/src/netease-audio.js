@@ -17,14 +17,12 @@ export class NetEaseAudio {
     this.settled = false;
     this.listeners = {
       loadedmetadata: () => {
-        const duration = this.media.duration;
-        // A restricted song can return a short preview instead of the recording.
-        if (!Number.isFinite(duration) || duration + 1.5 < this.durationSeconds) {
-          this.retryOrFail(new Error('音源不完整或暂不可用'));
-          return;
-        }
+        if (!this.checkDuration()) return;
         if (!this.settled) { this.settled = true; this.resolveReady(); }
       },
+      // Some mobile browsers initially report zero or an unknown duration.
+      // Validate again if a real duration becomes available later.
+      durationchange: () => { if (this.settled) this.checkDuration(); },
       error: () => this.retryOrFail(new Error('国内音源暂不可用')),
       playing: () => { if (!this.destroyed) onState(1); },
       pause: () => { if (!this.destroyed && !this.media.ended) onState(2); },
@@ -36,6 +34,17 @@ export class NetEaseAudio {
     for (const [name, listener] of Object.entries(this.listeners)) this.media.addEventListener(name, listener);
     this.media.src = this.sources[0];
     this.media.load();
+  }
+
+  checkDuration() {
+    const duration = this.media.duration;
+    // Zero, NaN and Infinity mean the browser has not provided a usable
+    // duration; only a known positive short duration proves it is a preview.
+    if (Number.isFinite(duration) && duration > 0 && duration + 1.5 < this.durationSeconds) {
+      this.retryOrFail(new Error('音源不完整或暂不可用'));
+      return false;
+    }
+    return true;
   }
 
   retryOrFail(error) {

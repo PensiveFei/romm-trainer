@@ -55,6 +55,24 @@ test('a short preview or an unreadable stream does not become a practice source'
   audio.destroy();
 });
 
+test('unknown mobile durations do not reject a playable track, but a later known short preview does', async () => {
+  for (const initialDuration of [0, NaN, Infinity]) {
+    const media = new FakeMedia(), events = [];
+    media.duration = initialDuration;
+    const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, (...event) => events.push(event), () => media);
+    media.emit('loadedmetadata');
+    await audio.ready;
+    await audio.unlock();
+    await audio.play();
+    assert.equal(audio.failed,false);
+    media.duration=30;
+    media.emit('durationchange');
+    assert.equal(audio.failed,true);
+    assert.equal(events.at(-1)[0],'error');
+    audio.destroy();
+  }
+});
+
 test('a failed HTTPS connection retries the provider before reporting failure', async () => {
   const media = new FakeMedia();
   const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, () => {}, () => media);
