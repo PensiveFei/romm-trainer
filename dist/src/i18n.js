@@ -13,7 +13,7 @@ const translations = {
   '查看上一轮成绩':'View last result', '成绩':'Results', '示范节拍':'Demo metronome', '节拍伴奏 · 无原曲':'Metronome · No song',
   '练习音量':'Practice audio volume', '鸽羽月露':'Moonlit Feathers', '流连欢宴':'Lingering Feast', '疏影引蝶映梅红':'Butterflies and Plum Blossoms', '聆泉浮莲':'Lotus on the Spring', '轮变的蚀焰':'Flames of Change', '镜烟的白星':'White Star in the Mirror', '谧海的冰牙':'Ice Fangs of the Sea', '慧心霜樱':'Frosted Sakura',
   '在线原声 · 加载中':'Online audio · Loading', '本地音频 · 加载中':'Local audio · Loading', '本地音频不可用':'Local audio unavailable', '按键音量':'Key sound volume', '背景音乐音量':'Background music volume',
-  '练习结果':'Practice Result', '关闭成绩':'Close result', '最高连击':'Max Combo', '谱面状态':'Chart status',
+  '练习结果':'Practice Result', '关闭成绩':'Close result', '最高连击':'Max Combo', '谱面状态':'Chart status', '歌曲详情':'Song details',
   '全部状态':'All statuses', '可练习':'Playable', '谱面待核对':'Needs review', '暂缺谱面':'Unavailable',
   '千音习谱':'ROMM Trainer', '练习模式':'Practice Mode', '开始练习':'Start Practice', '继续练习':'Resume Practice',
   '取消倒计时':'Cancel Countdown', '正在连接…':'Connecting…', '暂停':'Pause', '再练一次':'Practice Again',
