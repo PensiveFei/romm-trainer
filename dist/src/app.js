@@ -426,24 +426,44 @@ function syncOnlinePlaybackRate(player,actual) {
 async function play() {
   if (playPending) return;
   if (!checkRange(true)) return;
-  if (!audioReady) { setMessage(audioMode === 'online' ? '在线音源尚未就绪，可稍后重试或切换节拍伴奏。' : '请先选择与当前谱面配套的本地音频。', false, 0); return; }
+  const needsGesture = !audioReady && audioMode === 'online' && audio === onlineAudio && onlineAudio?.provider === 'netease' && !onlineAudio.failed;
+  if (!audioReady && !needsGesture) { setMessage(audioMode === 'online' ? '在线音源尚未就绪，可稍后重试或切换节拍伴奏。' : '请先选择与当前谱面配套的本地音频。', false, 0); return; }
   if (audio === localAudio && Number.isFinite(audio.duration) && audio.duration * 1000 + 50 < chart.durationMs + (sourceType === 'song' ? musicStart * 1000 : 0)) {
     setMessage('音频从所选起点开始的剩余时长不足，请调整音源起点或更换音频。', false, 0); return;
   }
   setDrawerOpen(false);
   playWasResume = hasStarted;
-  if (!hasStarted) {
-    session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
-    seekSong(Math.max(0,startMs - 2000));
-    hasStarted = true;
-  }
-  audio.playbackRate = rate;
   const activeAudio = audio, activePlay = ++playId;
   playPending = true;
   els.hint.classList.add('hidden');
-  setPlayText('取消倒计时');
   els.playIcon.textContent = 'Ⅱ';
   try {
+    let unlocked = false;
+    if (needsGesture) {
+      // Some mobile browsers defer metadata until play() is called from a tap.
+      // Start unlocking synchronously, then wait for both playback and metadata.
+      setPlayText('正在连接…');
+      setMessage('正在加载官方在线音源，首次播放可能需要一些时间。', true, 0);
+      const unlock = activeAudio.unlock();
+      let timeout;
+      try {
+        await Promise.race([
+          Promise.all([unlock,activeAudio.ready]),
+          new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),22000);})
+        ]);
+      } finally { clearTimeout(timeout); }
+      if (activeAudio !== audio || activePlay !== playId) return;
+      audioReady = true;
+      updateAudioBadge();
+      unlocked = true;
+    }
+    if (!hasStarted) {
+      session = new Judge(chart,startMs,endMs,rate,offset,hitWindowMs);
+      seekSong(Math.max(0,startMs - 2000));
+      hasStarted = true;
+    }
+    activeAudio.playbackRate = rate;
+    setPlayText('取消倒计时');
     // Start the local media element during the user's gesture. iOS can reject
     // a first play() invoked only after the countdown's timer has elapsed.
     if (activeAudio === localAudio) {
@@ -456,7 +476,7 @@ async function play() {
       activeAudio.currentTime=position;
       activeAudio.muted=localUnlock.muted;
       localUnlock=null;
-    } else if (activeAudio === onlineAudio && typeof activeAudio.unlock === 'function') {
+    } else if (!unlocked && activeAudio === onlineAudio && typeof activeAudio.unlock === 'function') {
       await activeAudio.unlock();
       if (activeAudio !== audio || activePlay !== playId) return;
     }
@@ -734,16 +754,20 @@ async function useOnline(provider = 'youtube') {
   audio = activeOnline;
   setAudioMode('online');
   resetSession();
-  setMessage('正在准备官方在线音源，也可在设置中选择节拍伴奏。', true, 0);
+  setMessage(activeOnline.provider === 'netease' ? '点击开始练习以连接网易云音乐原声。' : '正在准备官方在线音源，也可在设置中选择节拍伴奏。', true, 0);
   let timeout;
   try {
-    const waitMs = activeOnline.provider === 'netease' ? 22000 : 8000;
-    await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),waitMs);})]);
+    // Metadata may be deferred on mobile until the user taps play. YouTube
+    // still gets a connection timeout because its player initializes itself.
+    if (activeOnline.provider === 'netease') await activeOnline.ready;
+    else await Promise.race([activeOnline.ready,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('在线音源连接超时')),8000);})]);
     if (audio !== activeOnline || sourceType !== 'song') return;
     audioReady = true;
     updateAudioBadge();
-    resetSession();
-    setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
+    if (!playPending) {
+      resetSession();
+      setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
+    }
   } catch (error) {
     if (audio === activeOnline && sourceType === 'song') {
       handleOnlineFailure(activeOnline, error);

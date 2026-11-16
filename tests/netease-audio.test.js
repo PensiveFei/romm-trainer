@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { NetEaseAudio } from '../dist/src/netease-audio.js';
-import { neteasePage, neteaseSecureStream, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
+import { neteaseMetingStream, neteasePage, neteaseSecureStream, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
 import { resolveTrack } from '../functions/api/netease/[id].js';
 
 class FakeMedia {
@@ -19,7 +19,7 @@ class FakeMedia {
 test('NetEase playback follows the media clock and can unlock without shifting the start', async () => {
   const media = new FakeMedia(), events = [];
   const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, (...event) => events.push(event), () => media);
-  assert.equal(media.src, neteaseSecureStream(2014247586));
+  assert.equal(media.src, neteaseMetingStream(2014247586));
   media.emit('loadedmetadata');
   await audio.ready;
   audio.currentTime = 12.5;
@@ -48,12 +48,14 @@ test('a short preview or an unreadable stream does not become a practice source'
   media.emit('loadedmetadata');
   assert.equal(media.src, neteaseStream(1), 'an incomplete secure source retries the direct source');
   media.emit('loadedmetadata');
+  assert.equal(media.src, neteaseSecureStream(1), 'an incomplete direct source retries the site resolver');
+  media.emit('loadedmetadata');
   await assert.rejects(audio.ready, /不完整/);
   assert.equal(audio.failed, true);
   audio.destroy();
 });
 
-test('a failed secure connection retries the provider before reporting failure', async () => {
+test('a failed HTTPS connection retries the provider before reporting failure', async () => {
   const media = new FakeMedia();
   const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, () => {}, () => media);
   media.emit('error');
@@ -61,6 +63,26 @@ test('a failed secure connection retries the provider before reporting failure',
   media.emit('loadedmetadata');
   await audio.ready;
   assert.equal(audio.failed, false);
+  audio.destroy();
+});
+
+test('a source change while unlocking retries playback after metadata loads', async () => {
+  const media = new FakeMedia();
+  let rejectFirst, attempts=0;
+  media.play = () => {
+    if (++attempts === 1) return new Promise((_,reject)=>{rejectFirst=reject;});
+    media.paused=false;
+    return Promise.resolve();
+  };
+  const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, () => {}, () => media);
+  const unlocking=audio.unlock();
+  media.emit('error');
+  rejectFirst(Object.assign(new Error('source changed'),{name:'AbortError'}));
+  media.emit('loadedmetadata');
+  await unlocking;
+  assert.equal(attempts,2);
+  assert.equal(media.muted,false);
+  assert.equal(media.paused,true);
   audio.destroy();
 });
 

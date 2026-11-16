@@ -1,6 +1,7 @@
 // Interface text for the Japanese locale. Song and album names come from the catalog.
 export const japanese = {
-  '网易云音乐原声':'NetEase Music 音源', 'YouTube 原声':'YouTube 音源',
+  '点击开始练习以连接网易云音乐原声。':'練習開始を押して NetEase Music に接続します。',
+  '网易云音乐原声':'NetEase Music 音源', 'YouTube 原声':'YouTube 音源', '音源接口：清羽 Meting（第三方） ↗':'音源 API：清羽 Meting（外部サービス） ↗',
   '后退 10 秒':'10秒戻る', '前进 10 秒':'10秒進む', '设置练习区间':'練習区間を設定',
   '当前位置设为 A':'現在位置を A に設定', '当前位置设为 B':'現在位置を B に設定', '恢复全曲':'全曲に戻す',
   '查看上一轮成绩':'前回の結果を見る', '成绩':'結果', '示范节拍':'サンプル拍子', '节拍伴奏 · 无原曲':'メトロノーム · 原曲なし',

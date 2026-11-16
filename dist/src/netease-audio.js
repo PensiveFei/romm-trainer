@@ -1,4 +1,4 @@
-import { neteaseSecureStream, neteaseStream } from './netease-tracks.js';
+import { neteaseMetingStream, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
 
 // Use the provider's stream as a normal media element so the practice clock
 // follows the actual playback position, including buffering and seeking.
@@ -10,7 +10,7 @@ export class NetEaseAudio {
     this.failed = false;
     this.destroyed = false;
     this.media = createAudio();
-    this.sources = [neteaseSecureStream(track.id), neteaseStream(track.id)];
+    this.sources = [neteaseMetingStream(track.id), neteaseStream(track.id), neteaseSecureStream(track.id)];
     this.sourceIndex = 0;
     this.media.preload = 'metadata';
     this.media.preservesPitch = true;
@@ -68,10 +68,18 @@ export class NetEaseAudio {
 
   // Unlock this element during the click on mobile, before the countdown.
   async unlock() {
-    const muted = this.media.muted, time = this.media.currentTime;
+    const muted = this.media.muted, time = this.media.currentTime, sourceIndex = this.sourceIndex;
     this.media.muted = true;
     try {
-      await this.media.play();
+      try {
+        await this.media.play();
+      } catch (error) {
+        // Changing sources while play is pending aborts that play request.
+        if (error?.name !== 'AbortError' || this.sourceIndex === sourceIndex || this.failed || this.destroyed) throw error;
+        await this.ready;
+        if (this.destroyed) return;
+        await this.media.play();
+      }
       if (!this.destroyed) { this.media.pause(); this.media.currentTime = time; }
     } finally { this.media.muted = muted; }
   }

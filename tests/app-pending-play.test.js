@@ -41,12 +41,14 @@ test('leaving while online playback is connecting resets the button and restarts
   globalThis.requestAnimationFrame=()=>0;
   globalThis.location={origin:'http://localhost'};
   const media=[];
+  let deferMetadata=false, gesturePlays=0;
   globalThis.Audio=class {
     constructor(){this.listeners={};this.currentTime=0;this.duration=141.051;this.paused=true;media.push(this);}
     addEventListener(name,fn){this.listeners[name]=fn;}
     removeEventListener(name){delete this.listeners[name];}
     removeAttribute(name){if(name==='src') this.src='';}
-    load(){this.listeners.loadedmetadata?.();}
+    load(){if(!deferMetadata)this.listeners.loadedmetadata?.();}
+    play(){gesturePlays++;this.paused=false;if(deferMetadata)this.listeners.loadedmetadata?.();this.listeners.playing?.();return Promise.resolve();}
     pause(){this.paused=true;}
   };
   const chart=JSON.parse(await readFile(new URL('../dist/data/surasthana-legend.json',import.meta.url),'utf8'));
@@ -112,4 +114,17 @@ test('leaving while online playback is connecting resets the button and restarts
   t.mock.timers.tick(8000); await flush();
   assert.equal(el.songAudioStatus.textContent,'节拍伴奏 · 无歌曲原声');
   assert.match(el.message.textContent,/已切换节拍伴奏/);
+
+  // Mobile browsers can defer media metadata until play() runs in a tap.
+  // Waiting on metadata must not switch away before the user can unlock it.
+  deferMetadata=true;
+  el.domesticAudioButton.dispatch('click'); await flush();
+  t.mock.timers.tick(23000); await flush();
+  assert.equal(el.onlinePanel.hidden,true);
+  assert.match(el.message.textContent,/点击开始练习/);
+  const previousPlays=gesturePlays;
+  el.playButton.dispatch('click'); await flush(); await flush();
+  assert.ok(gesturePlays>previousPlays);
+  t.mock.timers.tick(1000); t.mock.timers.tick(1000); t.mock.timers.tick(1000); await flush();
+  assert.equal(el.playText.textContent,'暂停');
 });

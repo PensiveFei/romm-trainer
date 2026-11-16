@@ -115,6 +115,12 @@ export function neteaseStream(id) {
   return `https://music.163.com/song/media/outer/url?id=${id}.mp3`;
 }
 
+// Public Meting endpoint for personal websites, returning the provider's HTTPS
+// stream. The service can be unavailable, so the player also tries NetEase.
+export function neteaseMetingStream(id) {
+  return `https://met.liiiu.cn/meting/api?server=netease&type=url&id=${id}&br=128`;
+}
+
 export function neteaseSecureStream(id) {
   return `/api/netease/${id}`;
 }

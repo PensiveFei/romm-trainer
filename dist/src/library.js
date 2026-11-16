@@ -1,7 +1,7 @@
 import { favorites } from './favorites.js';
 import { tr, songName, groupName, songMatches, catalogUrl } from './i18n.js';
 import { practiceResults, resultTime, resultPercent } from './practice-results.js';
-import { neteaseTrack, neteasePage, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
+import { neteaseTrack, neteasePage, neteaseMetingStream, neteaseSecureStream, neteaseStream } from './netease-tracks.js';
 
 const $ = id => document.getElementById(id);
 const view=$('libraryView'), groupsEl=$('libraryGroups'), detail=$('libraryDetail'), search=$('librarySearch');
@@ -85,8 +85,10 @@ function renderDetails() {
       if (!mount.hidden) {const current=mount.querySelector('audio');if(current) current.pause();mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
       const frame=element(domestic ? 'audio' : 'iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
       if (domestic) {
-        frame.src=neteaseSecureStream(domestic.id);frame.controls=true;frame.preload='none';
-        frame.addEventListener('error',()=>{if(frame.dataset.directFallback)return;frame.dataset.directFallback='true';frame.src=neteaseStream(domestic.id);frame.load();});
+        const sources=[neteaseMetingStream(domestic.id),neteaseStream(domestic.id),neteaseSecureStream(domestic.id)];
+        let sourceIndex=0;
+        frame.src=sources[sourceIndex];frame.controls=true;frame.preload='none';
+        frame.addEventListener('error',()=>{if(sourceIndex+1>=sources.length)return;frame.src=sources[++sourceIndex];frame.load();});
       }
       else {frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;}
       window.dispatchEvent(new Event('romm:audio-preview-start'));

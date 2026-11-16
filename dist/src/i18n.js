@@ -7,7 +7,7 @@ try { const saved=globalThis.localStorage?.getItem(STORAGE_KEY); if (saved === '
 // The Chinese interface is the source of truth. Keep the original DOM text so
 // switching languages never replaces interactive children or user content.
 const translations = {
-  '网易云音乐原声':'NetEase Cloud Music', 'YouTube 原声':'YouTube soundtrack',
+  '网易云音乐原声':'NetEase Cloud Music', 'YouTube 原声':'YouTube soundtrack', '音源接口：清羽 Meting（第三方） ↗':'Audio API: Qingyu Meting (third party) ↗',
   '后退 10 秒':'Back 10 seconds', '前进 10 秒':'Forward 10 seconds', '设置练习区间':'Set practice section',
   '当前位置设为 A':'Set A to current time', '当前位置设为 B':'Set B to current time', '恢复全曲':'Use full song',
   '查看上一轮成绩':'View last result', '成绩':'Results', '示范节拍':'Demo metronome', '节拍伴奏 · 无原曲':'Metronome · No song',
@@ -85,6 +85,7 @@ const translations = {
   '已载入本设备保存的音频，可以直接练习。':'Loaded audio saved on this device. You can start practicing.', '请重试':'Please try again',
   '在线播放器已暂停，请使用上方按钮继续。':'The online player is paused. Use the button above to resume.', '在线原声不可用':'Online audio is unavailable',
   '正在准备官方在线音源，也可在设置中选择节拍伴奏。':'Preparing online audio. You can also select the metronome in settings.',
+  '点击开始练习以连接网易云音乐原声。':'Press Start Practice to connect to NetEase Cloud Music.',
   '在线音源连接超时':'Online audio connection timed out', '谱面已就绪。在线原声与游戏剪辑的对应仍需校准。':'Chart ready. Online audio synchronization may need adjustment.',
   '在线原声暂不可用，已切换节拍伴奏；可选择本地音频随原曲练习。':'Online audio is unavailable; switched to the metronome. You can choose a local audio file.',
   '已切换为节拍伴奏，可以直接练习；此伴奏不包含歌曲原声。':'Switched to the metronome. It does not include the original soundtrack.',
