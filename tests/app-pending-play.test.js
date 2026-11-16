@@ -27,7 +27,7 @@ test('leaving while online playback is connecting resets the button and restarts
     'statTiming','statMiss','trackTitle','trackArtist','trackInfo','sideTitle','sideArtist','sideBpm','sourceTag',
     'chartFile','audioFile','chartButton','audioButton','demoButton','themeSelect','performanceScore','completionValue',
     'completionFill','completionTrack','toolsDrawer','toolsToggle','toolsClose','hitWindow','hitWindowLabel','songButton',
-    'songOptions','onlinePanel','songAudioStatus','musicStart','onlineButton','metronomeButton','youtubePlayer','youtubeMount'];
+    'songOptions','onlinePanel','songAudioStatus','musicStart','onlineButton','domesticAudioButton','metronomeButton','youtubePlayer','youtubeMount'];
   const el=Object.fromEntries(ids.map(id=>[id,new FakeElement()]));
   el.startRange.value='0'; el.endRange.value='32'; el.toolsDrawer.hidden=true;
   const listeners={};
@@ -40,9 +40,12 @@ test('leaving while online playback is connecting resets the button and restarts
   globalThis.localStorage={getItem:()=>null,setItem(){}};
   globalThis.requestAnimationFrame=()=>0;
   globalThis.location={origin:'http://localhost'};
+  const media=[];
   globalThis.Audio=class {
-    constructor(){this.listeners={};this.currentTime=0;this.duration=120;this.paused=true;}
+    constructor(){this.listeners={};this.currentTime=0;this.duration=141.051;this.paused=true;media.push(this);}
     addEventListener(name,fn){this.listeners[name]=fn;}
+    removeEventListener(name){delete this.listeners[name];}
+    removeAttribute(name){if(name==='src') this.src='';}
     load(){this.listeners.loadedmetadata?.();}
     pause(){this.paused=true;}
   };
@@ -61,6 +64,7 @@ test('leaving while online playback is connecting resets the button and restarts
   const emit=name=>{for(const fn of listeners[name] || [])fn({type:name});};
   await import('../dist/src/app.js');
   el.songButton.dispatch('click'); await flush(); await flush();
+  el.onlineButton.dispatch('click'); await flush(); await flush();
   assert.equal(el.trackTitle.textContent,'净善的遐歌');
 
   for (const destination of ['romm:show-home','romm:library-open']) {
@@ -90,6 +94,16 @@ test('leaving while online playback is connecting resets the button and restarts
   youtube.options.events.onError({data:100}); await flush();
   assert.equal(el.songAudioStatus.textContent,'节拍伴奏 · 无歌曲原声');
   assert.match(el.message.textContent,/已切换节拍伴奏/);
+
+  // A failure after NetEase is ready attempts the YouTube source once.
+  el.domesticAudioButton.dispatch('click'); await flush(); await flush();
+  assert.equal(el.onlinePanel.hidden,true);
+  const previousYoutube=youtube;
+  media.at(-1).listeners.error(); await flush(); await flush();
+  assert.notEqual(youtube,previousYoutube);
+  assert.equal(el.onlinePanel.hidden,false);
+  youtube.options.events.onError({data:100}); await flush();
+  assert.equal(el.songAudioStatus.textContent,'节拍伴奏 · 无歌曲原声');
 
   // An unreachable online player must not leave the song permanently loading.
   window.YT.Player=class { pauseVideo(){} destroy(){} };

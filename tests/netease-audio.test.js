@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { NetEaseAudio } from '../dist/src/netease-audio.js';
+import { neteasePage, neteaseStream, neteaseTrack } from '../dist/src/netease-tracks.js';
+
+class FakeMedia {
+  constructor() { this.listeners = {}; this.currentTime = 0; this.duration = 141.051; this.paused = true; this.muted = false; this.playbackRate = 1; this.volume = 1; }
+  addEventListener(name, listener) { (this.listeners[name] ||= new Set()).add(listener); }
+  removeEventListener(name, listener) { this.listeners[name]?.delete(listener); }
+  emit(name) { for (const listener of this.listeners[name] || []) listener(); }
+  load() {}
+  async play() { this.paused = false; this.emit('playing'); }
+  pause() { this.paused = true; this.emit('pause'); }
+  removeAttribute(name) { if (name === 'src') this.src = ''; }
+}
+
+test('NetEase playback follows the media clock and can unlock without shifting the start', async () => {
+  const media = new FakeMedia(), events = [];
+  const audio = new NetEaseAudio({id:2014247586,durationSeconds:141.051}, (...event) => events.push(event), () => media);
+  assert.equal(media.src, neteaseStream(2014247586));
+  media.emit('loadedmetadata');
+  await audio.ready;
+  audio.currentTime = 12.5;
+  audio.playbackRate = .75;
+  audio.volume = .4;
+  await audio.unlock();
+  assert.equal(audio.currentTime, 12.5);
+  assert.equal(audio.paused, true);
+  assert.equal(media.muted, false);
+  assert.equal(audio.actualPlaybackRate, .75);
+  assert.equal(media.volume, .4);
+  await audio.play();
+  media.currentTime = 13.25;
+  assert.equal(audio.currentTime, 13.25);
+  media.emit('ended');
+  assert.deepEqual(events.at(-1), [0]);
+  audio.destroy();
+  media.emit('playing');
+  assert.deepEqual(events.at(-1), [0]);
+});
+
+test('a short preview or an unreadable stream does not become a practice source', async () => {
+  const media = new FakeMedia();
+  media.duration = 30;
+  const audio = new NetEaseAudio({id:1,durationSeconds:141}, () => {}, () => media);
+  media.emit('loadedmetadata');
+  await assert.rejects(audio.ready, /不完整/);
+  assert.equal(audio.failed, true);
+  audio.destroy();
+});
+
+test('closing a still-loading source cancels its readiness and ignores late events', async () => {
+  const media = new FakeMedia(), events = [];
+  const audio = new NetEaseAudio({id:1,durationSeconds:141}, (...event) => events.push(event), () => media);
+  const ready = assert.rejects(audio.ready, /关闭/);
+  audio.destroy();
+  media.emit('loadedmetadata');
+  media.emit('error');
+  await ready;
+  assert.deepEqual(events, []);
+});
+
+test('every YouTube catalog source has a matched domestic source with enough recording duration', async () => {
+  const catalog = JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
+  const songs = catalog.groups.flatMap(group => group.songs).filter(song => song.audio);
+  assert.equal(songs.length, 53);
+  for (const song of songs) {
+    const source = neteaseTrack(song);
+    assert.ok(source, song.title);
+    assert.ok(source.durationSeconds + 1.5 >= song.durationMs / 1000, song.title);
+    assert.match(neteasePage(source.id), /^https:\/\/music\.163\.com\/#\/song\?id=\d+$/);
+  }
+  assert.equal(neteaseTrack({id:'_GMusic16'}).id, 2014247586);
+  assert.equal(neteaseTrack({id:'not-a-song'}), null);
+});

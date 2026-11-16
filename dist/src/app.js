@@ -3,6 +3,8 @@ import { Judge, DEFAULT_HIT_WINDOW_MS } from './judge.js';
 import { THEMES, getTheme, rgba, paintMotif, paintBackdrop, paintHit } from './themes.js';
 import { isReferenceTheme, paintReferenceNote, paintReferenceBackdrop, paintReferenceHold } from './reference-themes.js';
 import { YouTubeAudio } from './youtube-audio.js';
+import { NetEaseAudio } from './netease-audio.js';
+import { neteaseTrack } from './netease-tracks.js';
 import { localAudioStore, localAudioOffsets } from './local-audio.js';
 import { stageLayout } from './stage-layout.js';
 import { firstUnfinishedNote, visibleStageNotes } from './stage-visibility.js';
@@ -25,7 +27,7 @@ const els = {
   sourceTag: $('sourceTag'), chartFile: $('chartFile'), audioFile: $('audioFile'), theme: $('themeSelect'),
   drawer: $('toolsDrawer'), drawerToggle: $('toolsToggle'), drawerClose: $('toolsClose'),
   songOptions: $('songOptions'), onlinePanel: $('onlinePanel'), songAudioStatus: $('songAudioStatus'),
-  musicStart: $('musicStart'), onlineButton: $('onlineButton'), metronomeButton: $('metronomeButton'),
+  musicStart: $('musicStart'), onlineButton: $('onlineButton'), domesticButton: $('domesticAudioButton'), metronomeButton: $('metronomeButton'),
   rememberAudio: $('rememberAudio'), savedAudioStatus: $('savedAudioStatus'), forgetAudio: $('forgetAudio'),
   audioBadge: $('audioModeBadge'), hitVolume: $('hitVolume'), hitVolumeLabel: $('hitVolumeLabel'),
   resultOpen: $('resultOpen'), resultDialog: $('practiceResult'), resultClose: $('resultClose'), resultDone: $('resultDone'),
@@ -279,7 +281,7 @@ function seekSong(ms) { audio.currentTime = Math.max(0, ms) / 1000 + (sourceType
 function updateAudioBadge() {
   if (!els.audioBadge) return;
   const text=audioMode==='demo' ? '示范节拍' : audioMode==='metronome' ? '节拍伴奏 · 无原曲' :
-    audioMode==='online' ? (audioReady ? '在线音源' : '在线原声 · 加载中') :
+    audioMode==='online' ? (audioReady && onlineAudio?.provider === 'netease' ? '网易云音乐原声' : audioReady ? '在线音源' : '在线原声 · 加载中') :
     audioFailed ? '本地音频不可用' : audioReady ? '本地音频' : '本地音频 · 加载中';
   els.audioBadge.textContent=translate(text);
   els.audioBadge.dataset.mode=audioMode;
@@ -288,16 +290,21 @@ function updateAudioBadge() {
 function setAudioMode(mode) {
   audioMode = mode;
   audioFailed = false;
-  els.wrap.classList.toggle('with-player', mode === 'online');
-  els.onlinePanel.hidden = mode !== 'online';
+  const domestic = mode === 'online' && onlineAudio?.provider === 'netease';
+  els.wrap.classList.toggle('with-player', mode === 'online' && !domestic);
+  els.onlinePanel.hidden = mode !== 'online' || domestic;
   els.songOptions.hidden = sourceType !== 'song';
   els.musicStart.disabled = mode === 'metronome';
-  const onlineDuration=currentSong?.audio?.durationSeconds;
+  const onlineDuration=domestic ? onlineAudio.durationSeconds : currentSong?.audio?.durationSeconds;
   const maxStart=mode === 'online' && Number.isFinite(onlineDuration) ? Math.max(0,Math.min(120,onlineDuration-chart.durationMs/1000)) : 120;
   els.musicStart.max = String(maxStart);
   els.musicStart.value = String(musicStart);
   els.onlineButton.disabled = !currentSong?.audio;
-  els.onlineButton.classList.toggle('selected', mode === 'online');
+  els.onlineButton.classList.toggle('selected', mode === 'online' && !domestic);
+  if (els.domesticButton) {
+    els.domesticButton.disabled = !neteaseTrack(currentSong);
+    els.domesticButton.classList.toggle('selected', domestic);
+  }
   els.metronomeButton.classList.toggle('selected', mode === 'metronome');
   els.songAudioStatus.textContent = translate(mode === 'online' ? '在线原声 · 同步待校准' : mode === 'metronome' ? '节拍伴奏 · 无歌曲原声' : '本地音频');
   updateAudioBadge();
@@ -449,6 +456,9 @@ async function play() {
       activeAudio.currentTime=position;
       activeAudio.muted=localUnlock.muted;
       localUnlock=null;
+    } else if (activeAudio === onlineAudio && typeof activeAudio.unlock === 'function') {
+      await activeAudio.unlock();
+      if (activeAudio !== audio || activePlay !== playId) return;
     }
     const completed = await new Promise(resolve => {
       finishCountdown = resolve;
@@ -482,10 +492,12 @@ async function play() {
     if (activeAudio === audio && activePlay === playId) {
       isPlaying = false; hasStarted = false;
       setPlayText('开始练习'); els.playIcon.textContent = '▶';
-      if (audioMode === 'online') {
-        discardOnline(activeAudio);
-        useMetronome();
-        setMessage('在线原声播放失败，已切换节拍伴奏；可选择本地音频随原曲练习。',false,0);
+      if (error?.name === 'NotAllowedError') {
+        setMessage('浏览器阻止了播放，请再次点击开始练习。',false,0,
+          'Playback was blocked by the browser. Please press Start again.',
+          'ブラウザによって再生がブロックされました。もう一度開始してください。');
+      } else if (audioMode === 'online') {
+        handleOnlineFailure(activeAudio, error);
       } else setMessage('音频无法播放，请检查本地音频文件或浏览器设置。', false, 0);
     }
   } finally {
@@ -653,35 +665,54 @@ async function useSong(song = DEFAULT_SONG) {
       setMessage('已载入本设备保存的音频，可以直接练习。',true);
       return;
     }
-    if (currentSong.audio) await useOnline(); else useMetronome();
+    if (neteaseTrack(currentSong)) await useOnline('netease');
+    else if (currentSong.audio) await useOnline('youtube');
+    else useMetronome();
   } catch (error) {
     if (selection === selectionId) setMessage('曲谱加载失败：' + (error instanceof Error ? error.message : '请重试'), false, 0);
   }
 }
 function discardOnline(player) {
   player.destroy();
-  if (onlineAudio === player) onlineAudio = null;
+  if (onlineAudio !== player) return;
+  onlineAudio = null;
   const mount=$('youtubeMount'), replacement=document.createElement('div');
   replacement.id='youtubePlayer'; mount.replaceChildren(replacement);
 }
-async function useOnline() {
-  if (sourceType !== 'song' || !currentSong?.audio) return;
+function handleOnlineFailure(player, error) {
+  if (audio !== player || sourceType !== 'song') return;
+  const canTryYouTube = player.provider === 'netease' && !!currentSong?.audio;
+  discardOnline(player);
+  if (canTryYouTube) {
+    setMessage('网易云音乐原声暂不可用，正在尝试 YouTube。',false,0,
+      'NetEase audio is unavailable. Trying YouTube.',
+      'NetEase Music を利用できません。YouTube を試します。');
+    void useOnline('youtube');
+  } else {
+    useMetronome();
+    setMessage((error?.message || '在线原声不可用') + '，已切换节拍伴奏；可选择本地音频随原曲练习。', false, 0);
+  }
+}
+async function useOnline(provider = 'youtube') {
+  if (sourceType !== 'song') return;
+  const domesticTrack = neteaseTrack(currentSong);
+  const youtubeTrack = currentSong?.audio;
+  if (provider === 'netease' ? !domesticTrack : !youtubeTrack) return;
   stopAudio();
   musicStart = 0;
   audioReady = false;
-  const {videoId,startSeconds}=currentSong.audio;
-  if (onlineAudio && (onlineAudio.failed || onlineAudio.videoId !== videoId || onlineAudio.trackStartSeconds !== startSeconds)) {
-    onlineAudio.destroy();
-    onlineAudio = null;
-    const mount = $('youtubeMount');
-    const player = document.createElement('div'); player.id = 'youtubePlayer';
-    mount.replaceChildren(player);
+  const {videoId,startSeconds}=youtubeTrack || {};
+  const sameSource = provider === 'netease'
+    ? onlineAudio?.provider === 'netease' && onlineAudio.trackId === domesticTrack.id
+    : onlineAudio?.provider !== 'netease' && onlineAudio?.videoId === videoId && onlineAudio?.trackStartSeconds === startSeconds;
+  if (onlineAudio && (onlineAudio.failed || !sameSource)) {
+    discardOnline(onlineAudio);
   }
   const label=$('onlineTrackLabel'), link=$('onlineLink');
   if (label) label.textContent=tr('官方原声专辑 · 《' + currentSong.title + '》', 'Official soundtrack · ' + songName(currentSong), '公式サウンドトラック · ' + songName(currentSong));
-  if (link) link.href='https://www.youtube.com/watch?v=' + encodeURIComponent(videoId) + '&t=' + Math.floor(startSeconds) + 's';
+  if (link && youtubeTrack) link.href='https://www.youtube.com/watch?v=' + encodeURIComponent(videoId) + '&t=' + Math.floor(startSeconds) + 's';
   if (!onlineAudio) {
-    const player = new YouTubeAudio($('youtubePlayer'), (state, error) => {
+    const onState = (state, error) => {
       if (audio !== player || sourceType !== 'song') return;
       if (state === 'ratechange') {
         syncOnlinePlaybackRate(player,error);
@@ -690,11 +721,12 @@ async function useOnline() {
       } else if (state === 0 && isPlaying) completePass();
       else if (state === 'error') {
         if (isPlaying) pause();
-        discardOnline(player);
-        useMetronome();
-        setMessage((error?.message || '在线原声不可用') + '，已切换节拍伴奏；可选择本地音频随原曲练习。', false, 0);
+        handleOnlineFailure(player, error);
       } else if (state === 1 && !isPlaying && !playPending) player.pause();
-    }, {videoId,trackStartSeconds:startSeconds});
+    };
+    const player = provider === 'netease'
+      ? new NetEaseAudio(domesticTrack, onState)
+      : new YouTubeAudio($('youtubePlayer'), onState, {videoId,trackStartSeconds:startSeconds});
     onlineAudio = player;
   }
   onlineAudio.volume = practiceVolume / 100;
@@ -711,11 +743,9 @@ async function useOnline() {
     updateAudioBadge();
     resetSession();
     setMessage('谱面已就绪。在线原声与游戏剪辑的对应仍需校准。', true, 0);
-  } catch {
+  } catch (error) {
     if (audio === activeOnline && sourceType === 'song') {
-      discardOnline(activeOnline);
-      useMetronome();
-      setMessage('在线原声暂不可用，已切换节拍伴奏；可选择本地音频随原曲练习。',false,0);
+      handleOnlineFailure(activeOnline, error);
     }
   } finally { clearTimeout(timeout); }
 }
@@ -983,7 +1013,8 @@ $('chartButton').addEventListener('click',()=>els.chartFile.click());
 $('audioButton').addEventListener('click',()=>els.audioFile.click());
 $('demoButton').addEventListener('click',useDemo);
 $('songButton').addEventListener('click',()=>void useSong());
-els.onlineButton.addEventListener('click',()=>void useOnline());
+els.domesticButton?.addEventListener('click',()=>void useOnline('netease'));
+els.onlineButton.addEventListener('click',()=>void useOnline('youtube'));
 els.metronomeButton.addEventListener('click',useMetronome);
 els.musicStart.addEventListener('change',()=>{
   if (isPlaying) pause();

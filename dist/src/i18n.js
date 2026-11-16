@@ -7,6 +7,7 @@ try { const saved=globalThis.localStorage?.getItem(STORAGE_KEY); if (saved === '
 // The Chinese interface is the source of truth. Keep the original DOM text so
 // switching languages never replaces interactive children or user content.
 const translations = {
+  '网易云音乐原声':'NetEase Cloud Music', 'YouTube 原声':'YouTube soundtrack',
   '后退 10 秒':'Back 10 seconds', '前进 10 秒':'Forward 10 seconds', '设置练习区间':'Set practice section',
   '当前位置设为 A':'Set A to current time', '当前位置设为 B':'Set B to current time', '恢复全曲':'Use full song',
   '查看上一轮成绩':'View last result', '成绩':'Results', '示范节拍':'Demo metronome', '节拍伴奏 · 无原曲':'Metronome · No song',

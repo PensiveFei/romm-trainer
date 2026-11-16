@@ -52,10 +52,11 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   let nextFrame, frameRequests=0;
   globalThis.requestAnimationFrame=(fn)=>{ frameRequests++; nextFrame=fn; return 0; };
   class FakeAudio {
-    constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; globalThis.testAudio=this; }
+    constructor(){ this.listeners={}; this.currentTime=0; this.duration=32; this.paused=true; if (!globalThis.testAudio) globalThis.testAudio=this; }
     addEventListener(name,fn){ this.listeners[name]=fn; }
+    removeEventListener(name){ delete this.listeners[name]; }
     removeAttribute(name){ if (name === 'src') this.src=''; }
-    load(){ this.listeners.loadedmetadata?.(); }
+    load(){ if (this.src?.includes('music.163.com')) this.duration=141.051; this.listeners.loadedmetadata?.(); }
     async play(){ if (this.failNextPlay) { this.failNextPlay=false; throw new Error('playback blocked'); } this.paused=false; }
     pause(){ this.paused=true; }
   }
@@ -241,6 +242,9 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
     pauseVideo(){this.options.events.onStateChange({data:2});}
   }};
   el.songButton.dispatch('click'); await flush(); await flush();
+  assert.equal(el.audioModeBadge.textContent,'网易云音乐原声');
+  assert.equal(el.onlinePanel.hidden,true, 'native audio keeps the practice stage full width');
+  el.onlineButton.dispatch('click'); await flush(); await flush();
   assert.equal(el.trackTitle.textContent,'净善的遐歌');
   assert.equal(el.statHits.children[0].textContent.trim(),'0');
   assert.equal(el.statHits.children[1].textContent,'/ 231');
@@ -250,6 +254,7 @@ test('pausing a held note keeps it valid while the key remains down', async (t) 
   const catalog=JSON.parse(await readFile(new URL('../dist/data/catalog.json', import.meta.url), 'utf8'));
   const catalogSong=catalog.groups.flatMap(group=>group.songs).find(item=>item.id==='_GMusic16');
   listeners['romm:select-song'].forEach(fn=>fn({detail:catalogSong})); await flush(); await flush();
+  el.onlineButton.dispatch('click'); await flush(); await flush();
   assert.equal(el.musicStart.max,'46','the library song offers the same safe audio offset');
   youtube.getPlaybackRate=()=>1;
   el.rateButtons.dispatch('click',{target:{closest:()=>({dataset:{rate:'0.5'}})}});

@@ -1,6 +1,7 @@
 import { favorites } from './favorites.js';
 import { tr, songName, groupName, songMatches, catalogUrl } from './i18n.js';
 import { practiceResults, resultTime, resultPercent } from './practice-results.js';
+import { neteaseTrack, neteasePage, neteaseStream } from './netease-tracks.js';
 
 const $ = id => document.getElementById(id);
 const view=$('libraryView'), groupsEl=$('libraryGroups'), detail=$('libraryDetail'), search=$('librarySearch');
@@ -36,7 +37,9 @@ function updateFavoriteButton() {
   favoriteButton.title=marked?tr('已收藏 · 点击取消','Favorited · click to remove'):tr('收藏曲目','Add to favorites');
 }
 function renderDetails() {
-  const hadPreview=!!detail.querySelector('.library-audio-mount iframe');
+  const previousPreview=detail.querySelector('.library-audio-mount iframe, .library-audio-mount audio');
+  const hadPreview=!!previousPreview;
+  if (previousPreview?.tagName === 'AUDIO') previousPreview.pause();
   detail.replaceChildren();
   if (hadPreview) window.dispatchEvent(new Event('romm:audio-preview-end'));
   start.disabled=!selected || selected.status!=='ready';
@@ -70,16 +73,18 @@ function renderDetails() {
     const profile=`${resultTime(recent.startMs)} – ${resultTime(recent.endMs)} · ${recent.rate.toFixed(2)}× · ±${recent.hitWindowMs} ms · ${tr(`偏移 ${offset}`,`Offset ${offset}`,`調整 ${offset}`)}`;
     detail.append(element('p','library-recent-best',tr(`最近记录：最佳完成度 ${resultPercent(recent)}%（${profile}）`,`Recent personal best: ${resultPercent(recent)}% (${profile})`,`最近の自己ベスト：${resultPercent(recent)}%（${profile}）`)));
   }
-  if (song.audio && /^[A-Za-z0-9_-]{11}$/.test(song.audio.videoId)) {
+  const domestic=neteaseTrack(song);
+  if (domestic || (song.audio && /^[A-Za-z0-9_-]{11}$/.test(song.audio.videoId))) {
     const audio=element('div','library-audio-preview');
     const toggle=element('button','library-audio-toggle',tr('♫ 试听官方原声','♫ Preview soundtrack'));toggle.type='button';toggle.setAttribute('aria-expanded','false');
-    const link=element('a','',tr('在 YouTube 打开 ↗','Open on YouTube ↗'));link.href=`https://www.youtube.com/watch?v=${song.audio.videoId}&t=${Math.max(0,Math.floor(song.audio.startSeconds))}s`;link.target='_blank';link.rel='noopener noreferrer';
+    const link=element('a','',domestic ? tr('在网易云音乐打开 ↗','Open in NetEase Cloud Music ↗','NetEase Music で開く ↗') : tr('在 YouTube 打开 ↗','Open on YouTube ↗','YouTube で開く ↗'));
+    link.href=domestic ? neteasePage(domestic.id) : `https://www.youtube.com/watch?v=${song.audio.videoId}&t=${Math.max(0,Math.floor(song.audio.startSeconds))}s`;link.target='_blank';link.rel='noopener noreferrer';
     const mount=element('div','library-audio-mount');mount.hidden=true;
     toggle.addEventListener('click',()=>{
-      if (!mount.hidden) {mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
-      const frame=element('iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
-      frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;
-      frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;
+      if (!mount.hidden) {const current=mount.querySelector('audio');if(current) current.pause();mount.replaceChildren();mount.hidden=true;toggle.textContent=tr('♫ 试听官方原声','♫ Preview soundtrack');toggle.setAttribute('aria-expanded','false');window.dispatchEvent(new Event('romm:audio-preview-end'));return;}
+      const frame=element(domestic ? 'audio' : 'iframe');frame.title=tr(`${song.title} 官方原声`,`${songName(song)} official soundtrack`,`${songName(song)} 公式サウンドトラック`);
+      if (domestic) {frame.src=neteaseStream(domestic.id);frame.controls=true;frame.preload='none';}
+      else {frame.src=`https://www.youtube.com/embed/${song.audio.videoId}?start=${Math.max(0,Math.floor(song.audio.startSeconds))}&playsinline=1`;frame.allow='encrypted-media; picture-in-picture';frame.allowFullscreen=true;}
       window.dispatchEvent(new Event('romm:audio-preview-start'));
       mount.append(frame);mount.hidden=false;toggle.textContent=tr('收起试听','Close preview');toggle.setAttribute('aria-expanded','true');
       mount.scrollIntoView({block:'nearest'});
